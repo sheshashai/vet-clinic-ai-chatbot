@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Dr. Venky Pet Clinic</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #6C63FF;
+      --primary-dark: #5B52E8;
+      --primary-light: #8680FF;
+      --accent-color: #F9A826;
+      --accent-dark: #E09612;
+      --accent-light: #FBB944;
+      --bg-primary: linear-gradient(135deg, #F8FAFC 0%, #E1E7F0 50%, #C7D2FE 100%);
+      --bg-secondary: #FFFFFF;
+      --bg-glass: rgba(255, 255, 255, 0.85);
+      --bg-glass-light: rgba(255, 255, 255, 0.95);
+      --text-primary: #333333;
+      --text-secondary: #6B7280;
+      --text-light: #9CA3AF;
+      --text-white: #FFFFFF;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 32px rgba(108, 99, 255, 0.15);
+      --shadow-xl: 0 16px 64px rgba(108, 99, 255, 0.2);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      --space-xs: 8px;
+      --space-sm: 12px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+    }
+    body {
+      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg-primary);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      line-height: 1.6;
+    }
+    /* Navbar/Header Styles (copied from index.html) */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, #fff 60%, #f3f4fe 100%);
+      box-shadow: 0 4px 18px rgba(108, 99, 255, 0.08);
+      padding: 0.7rem 2rem;
+      position: relative;
+      z-index: 10;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .pet-logo {
+      font-size: 2rem;
+      color: #6C63FF;
+      background: #f3f4fe;
+      border-radius: 50%;
+      padding: 0.3rem 0.5rem;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .clinic-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #333;
+      letter-spacing: -0.5px;
+      user-select: none;
+    }
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.45em 1.1em;
+      border-radius: 1.5em;
+      border: 2px solid #6C63FF;
+      text-decoration: none;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(108, 99, 255, 0.07);
+    }
+    .nav-login {
+      background: #fff;
+      color: #6C63FF;
+      border: 2px solid #6C63FF;
+    }
+    .nav-login:hover, .nav-login:focus {
+      background: #f3f4fe;
+      color: #5B52E8;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.13);
+    }
+    .nav-register {
+      background: linear-gradient(90deg, #6C63FF 60%, #F9A826 100%);
+      color: #fff;
+      border: 2px solid #6C63FF;
+      box-shadow: 0 2px 8px rgba(249, 168, 38, 0.10);
+    }
+    .nav-register:hover, .nav-register:focus {
+      background: linear-gradient(90deg, #5B52E8 60%, #FBB944 100%);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(249, 168, 38, 0.13);
+    }
+    .nav-btn i {
+      font-size: 1.1em;
+    }
+    .navbar-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: #6C63FF;
+      cursor: pointer;
+      margin-left: 1rem;
+      outline: none;
+      transition: color 0.18s;
+    }
+    .navbar-toggle:focus, .navbar-toggle:hover {
+      color: #F9A826;
+    }
+    .welcome-banner {
+      width: 100%;
+      background: linear-gradient(90deg, #f3f4fe 60%, #fff 100%);
+      color: #6C63FF;
+      text-align: center;
+      font-size: 1.08rem;
+      font-weight: 600;
+      padding: 0.7em 0;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.04);
+      margin-bottom: 0.5rem;
+      user-select: none;
+    }
+    @media (max-width: 700px) {
+      .navbar {
+        flex-wrap: wrap;
+        padding: 0.7rem 1rem;
+      }
+      .navbar-left {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+        margin-bottom: 0.5rem;
+      }
+      .navbar-right {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: #fff;
+        position: absolute;
+        top: 100%;
+        right: 1rem;
+        min-width: 150px;
+        border-radius: 1em;
+        box-shadow: 0 4px 18px rgba(108, 99, 255, 0.13);
+        padding: 0.7em 0.5em;
+        z-index: 100;
+      }
+      .navbar-toggle {
+        display: block;
+      }
+      .navbar.open .navbar-right {
+        display: flex;
+      }
+    }
+    .nav-btn:focus-visible {
+      outline: 3px solid #F9A826;
+      outline-offset: 2px;
+    }
+    /* Login/Register Form Styles (match chat container) */
+    .login-container {
+      width: 90vw;
+      max-width: 400px;
+      background: var(--bg-glass);
+      border: 2px solid var(--primary-color);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      margin: 48px auto 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+      padding: var(--space-2xl) var(--space-xl);
+      transition: all 0.3s ease-in-out;
+    }
+    .login-container:hover {
+      border-color: var(--primary-dark);
+      box-shadow: var(--shadow-xl), 0 0 0 4px rgba(108, 99, 255, 0.1);
+      transform: translateY(-2px);
+    }
+    .login-header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      justify-content: center;
+    }
+    .login-header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+    .form-group label {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      border: 2px solid #E5E7EB;
+      border-radius: var(--radius-lg);
+      outline: none;
+      font-size: 1rem;
+      font-family: 'Open Sans', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease-in-out;
+      margin-bottom: 8px;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--primary-color);
+      background: var(--bg-secondary);
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+    }
+    .btn, .btn-primary {
+      width: 100%;
+      padding: var(--space-md) 0;
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: var(--text-white);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow-md);
+      margin-top: 8px;
+      transition: all 0.3s ease-in-out;
+    }
+    .btn:hover, .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px) scale(1.02);
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      margin-top: 18px;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .toggle-link {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      color: var(--primary-color);
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .toggle-link:hover {
+      color: var(--accent-color);
+    }
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: var(--primary-dark);
+    }
+    .user-info {
+      text-align: center;
+      margin-bottom: 18px;
+      color: #059669;
+      font-weight: 600;
+    }
+    .message-success, .message-error {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    @media (max-width: 700px) {
+      .login-container {
+        padding: var(--space-xl) var(--space-md);
+        margin: var(--space-xl) auto 0 auto;
+      }
+    }
+    @media (max-width: 480px) {
+      .login-container {
+        padding: var(--space-md) var(--space-xs);
+        margin: var(--space-lg) auto 0 auto;
+        border-radius: var(--radius-md);
+      }
+      .login-header h1 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Modern Navbar/Header Start -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <span class="pet-logo" aria-label="Pet Clinic Logo"><i class="fa-solid fa-paw"></i></span>
+      <span class="clinic-title">Dr. Venky Pet Clinic</span>
+    </div>
+    <!-- No navbar-right buttons on login page -->
+  </header>
+  <!-- Optional Welcome Banner -->
+  <div class="welcome-banner">
+    <span>🐾 Welcome! We're here for your pet's health and happiness. 🐾</span>
+  </div>
+  <!-- Header/Navbar End -->
+  <div class="login-container glass-container">
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+    <div class="login-header">
+      <h1><i class="fas fa-paw"></i> Dr. Venky Pet Clinic</h1>
+    </div>
+    <div id="user-info" class="user-info" style="display:none;"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-username">Username or Email</label>
+        <input type="text" id="login-username" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary">Login</button>
+      <div id="login-message"></div>
+    </form>
+    <a href="#" id="register-link" class="toggle-link" style="display:block;">Don't have an account? <strong>Register here</strong></a>
+    <form id="register-form" style="display:none;">
+      <div class="form-group">
+        <label for="register-username">Username</label>
+        <input type="text" id="register-username" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="register-email">Email</label>
+        <input type="email" id="register-email" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="register-password">Password</label>
+        <input type="password" id="register-password" required autocomplete="new-password">
+      </div>
+      <div class="form-group" id="role-group" style="display:none;">
+        <label for="register-role">Role</label>
+        <select id="register-role">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Register</button>
+      <div id="register-message"></div>
+    </form>
+    <a href="#" id="login-link" class="toggle-link" style="display:none;">Already have an account? <strong>Back to Login</strong></a>
+    <button id="logout-btn" class="btn btn-danger" style="display:none; margin-top:18px;">Logout</button>
+  </div>
+  <script>
+    // Hamburger menu toggle for mobile
+    const navbar = document.querySelector('.navbar');
+    const toggle = document.querySelector('.navbar-toggle');
+    if (toggle) {
+      const navRight = document.querySelector('.navbar-right');
+      toggle.addEventListener('click', () => {
+        navbar.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+      });
+      toggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle.click();
+        }
+      });
+    }
+  </script>
+  <script>
+    // Login/Register logic (updated for new links)
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const registerLink = document.getElementById('register-link');
+    const loginLink = document.getElementById('login-link');
+    const loginMessage = document.getElementById('login-message');
+    const registerMessage = document.getElementById('register-message');
+    const userInfo = document.getElementById('user-info');
+    const logoutBtn = document.getElementById('logout-btn');
+    const roleGroup = document.getElementById('role-group');
+    const registerRole = document.getElementById('register-role');
+
+    let isRegister = false;
+    let isAdmin = false;
+    let loggedInUser = null;
+
+    async function checkUser() {
+      const res = await fetch('/user', { credentials: 'include' });
+      const data = await res.json();
+      if (data.logged_in) {
+        loggedInUser = data.user;
+        userInfo.style.display = '';
+        userInfo.textContent = `Logged in as: ${data.user.username} (${data.user.role})`;
+        logoutBtn.style.display = '';
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'none';
+        registerLink.style.display = 'none';
+        loginLink.style.display = 'none';
+        if (data.user.role === 'admin') {
+          isAdmin = true;
+          roleGroup.style.display = '';
+        }
+      } else {
+        userInfo.style.display = 'none';
+        logoutBtn.style.display = 'none';
+        loginForm.style.display = isRegister ? 'none' : '';
+        registerForm.style.display = isRegister ? '' : 'none';
+        registerLink.style.display = isRegister ? 'none' : 'block';
+        loginLink.style.display = isRegister ? 'block' : 'none';
+        isAdmin = false;
+        roleGroup.style.display = 'none';
+      }
+    }
+
+    checkUser();
+
+    // Show register form if ?register=1 in URL
+    if (window.location.search.includes('register=1')) {
+      isRegister = true;
+      loginForm.style.display = 'none';
+      registerForm.style.display = '';
+      registerLink.style.display = 'none';
+      loginLink.style.display = 'block';
+    }
+
+    registerLink.onclick = (e) => {
+      e.preventDefault();
+      isRegister = true;
+      loginForm.style.display = 'none';
+      registerForm.style.display = '';
+      registerLink.style.display = 'none';
+      loginLink.style.display = 'block';
+      loginMessage.textContent = '';
+      registerMessage.textContent = '';
+    };
+    loginLink.onclick = (e) => {
+      e.preventDefault();
+      isRegister = false;
+      loginForm.style.display = '';
+      registerForm.style.display = 'none';
+      registerLink.style.display = 'block';
+      loginLink.style.display = 'none';
+      loginMessage.textContent = '';
+      registerMessage.textContent = '';
+    };
+
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      loginMessage.textContent = '';
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      
+      if (!username || !password) {
+        loginMessage.innerHTML = '<div class="message-error">Please enter both username and password.</div>';
+        return;
+      }
+      
+      console.log('Attempting login with:', { username }); // Debug log
+      
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, password })
+        });
+        
+        console.log('Login response status:', res.status); // Debug log
+        
+        if (!res.ok) {
+          console.error('Login response not ok:', res.status, res.statusText);
+          loginMessage.innerHTML = '<div class="message-error">Login failed. Please try again.</div>';
+          return;
+        }
+        
+        const data = await res.json();
+        console.log('Login response data:', data); // Debug log
+        
+        if (data.success) {
+          loginMessage.innerHTML = '<div class="message-success">Login successful! Redirecting...</div>';
+          setTimeout(() => {
+            if (data.role === 'admin') {
+              window.location.href = 'admin.html';
+            } else {
+              // Check if there's a redirect URL parameter
+              const urlParams = new URLSearchParams(window.location.search);
+              const redirectTo = urlParams.get('redirect') || '/';
+              window.location.href = redirectTo;
+            }
+          }, 1000);
+        } else {
+          loginMessage.innerHTML = `<div class="message-error">${data.message || 'Login failed.'}</div>`;
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        loginMessage.innerHTML = `<div class="message-error">Network error: ${error.message}</div>`;
+      }
+    };
+
+    registerForm.onsubmit = async (e) => {
+      e.preventDefault();
+      registerMessage.textContent = '';
+      const username = document.getElementById('register-username').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      let role = 'user';
+      if (isAdmin) {
+        role = registerRole.value;
+      }
+      
+      try {
+        console.log('Sending registration data:', { username, email, role }); // Debug
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, email, password, role })
+        });
+        
+        console.log('Response status:', res.status); // Debug
+        const data = await res.json();
+        console.log('Response data:', data); // Debug
+        
+        if (data.success) {
+          registerMessage.innerHTML = '<div class="message-success">Registration successful! You can now login.</div>';
+          // Clear the form
+          document.getElementById('register-username').value = '';
+          document.getElementById('register-email').value = '';
+          document.getElementById('register-password').value = '';
+          // Switch to login form
+          setTimeout(() => {
+            isRegister = false;
+            loginForm.style.display = '';
+            registerForm.style.display = 'none';
+            registerLink.style.display = 'block';
+            loginLink.style.display = 'none';
+            registerMessage.textContent = '';
+            loginMessage.innerHTML = '<div class="message-success">Registration successful! Please login with your credentials.</div>';
+          }, 1500);
+        } else {
+          registerMessage.innerHTML = `<div class="message-error">${data.message || 'Registration failed.'}</div>`;
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        registerMessage.innerHTML = `<div class="message-error">Network error: ${error.message}</div>`;
+      }
+    };
+
+    logoutBtn.onclick = async () => {
+      await fetch('/logout', { method: 'POST', credentials: 'include' });
+      window.location.reload();
+    };
+  </script>
+</body>
+</html> 

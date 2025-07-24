@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Venky Pet Clinic Chatbot</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      /* Design System Colors */
+      --primary-color: #6C63FF;
+      --primary-dark: #5B52E8;
+      --primary-light: #8680FF;
+      --accent-color: #F9A826;
+      --accent-dark: #E09612;
+      --accent-light: #FBB944;
+      
+      /* Background Colors */
+      --bg-primary: linear-gradient(135deg, #F8FAFC 0%, #E1E7F0 50%, #C7D2FE 100%);
+      --bg-secondary: #FFFFFF;
+      --bg-glass: rgba(255, 255, 255, 0.85);
+      --bg-glass-light: rgba(255, 255, 255, 0.95);
+      
+      /* Text Colors */
+      --text-primary: #333333;
+      --text-secondary: #6B7280;
+      --text-light: #9CA3AF;
+      --text-white: #FFFFFF;
+      
+      /* Shadow & Effects */
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 32px rgba(108, 99, 255, 0.15);
+      --shadow-xl: 0 16px 64px rgba(108, 99, 255, 0.2);
+      
+      /* Border Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      
+      /* Spacing */
+      --space-xs: 8px;
+      --space-sm: 12px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg-primary);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    p {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* WebGL Canvas Styling */
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* Background Orbs & Floating Icons */
+    .bg-orbs {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -3;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(2px);
+      opacity: 0.38;
+      animation: float 18s infinite ease-in-out;
+    }
+
+    .orb.pink {
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, var(--accent-color), transparent);
+      top: 14%;
+      left: 12%;
+      animation-delay: 1s;
+    }
+
+    .orb.violet {
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, var(--primary-color), transparent);
+      top: 62%;
+      left: 78%;
+      animation-delay: 3s;
+    }
+
+    .orb.blue {
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, var(--primary-light), transparent);
+      top: 74%;
+      left: 17%;
+      animation-delay: 7s;
+    }
+
+    .orb.green {
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle, var(--accent-light), transparent);
+      top: 33%;
+      left: 69%;
+      animation-delay: 2s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      25% { transform: translateY(-25px); }
+      50% { transform: translateY(10px); }
+      75% { transform: translateY(-15px); }
+    }
+
+    .floating-elements {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.13;
+    }
+
+    .floating-paw, .floating-heart, .floating-star {
+      position: absolute;
+      font-size: 2rem;
+      animation: float2 24s infinite linear;
+    }
+
+    .floating-paw:nth-child(1) {
+      top: 13%;
+      left: 60%;
+      animation-delay: 0s;
+    }
+
+    .floating-paw:nth-child(2) {
+      top: 70%;
+      left: 35%;
+      animation-delay: 7s;
+    }
+
+    .floating-heart {
+      top: 40%;
+      left: 80%;
+      font-size: 1.5rem;
+      animation-delay: 13s;
+    }
+
+    .floating-star {
+      top: 86%;
+      left: 12%;
+      font-size: 1.2rem;
+      animation-delay: 18s;
+    }
+
+    @keyframes float2 {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      33% { transform: translateY(-20px) rotate(60deg); }
+      66% { transform: translateY(10px) rotate(-20deg); }
+    }
+
+    /* Main Container */
+    .main-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 90vw;
+      max-width: 1200px;
+      background: var(--bg-glass);
+      border: 2px solid var(--primary-color);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      margin: 0 auto;
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .chat-container:hover {
+      border-color: var(--primary-dark);
+      box-shadow: var(--shadow-xl), 0 0 0 4px rgba(108, 99, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: var(--text-white);
+      padding: var(--space-2xl) var(--space-xl);
+      text-align: center;
+      position: relative;
+    }
+
+    .pest-emoji {
+      font-size: 3rem;
+      margin-bottom: var(--space-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      animation: bounce 2s infinite;
+    }
+
+    .pest-emoji i {
+      font-size: 2.5rem;
+      color: var(--accent-color);
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      60% { transform: translateY(-5px); }
+    }
+
+    .chat-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .chat-subtitle {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      opacity: 0.9;
+      margin-top: var(--space-xs);
+      font-weight: 400;
+    }
+
+    .admin-link {
+      position: absolute;
+      top: var(--space-md);
+      right: var(--space-md);
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-white);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-lg);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s ease-in-out;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .admin-link:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .admin-link i {
+      font-size: 1rem;
+    }
+
+    .home-btn {
+      position: absolute;
+      top: var(--space-md);
+      left: var(--space-md);
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-white);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-lg);
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s ease-in-out;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .home-btn.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .home-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .home-btn i {
+      font-size: 1rem;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-2xl) var(--space-2xl);
+      background: var(--bg-glass-light);
+      position: relative;
+    }
+
+    .chat-box::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-box::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: var(--radius-sm);
+    }
+
+    .chat-box::-webkit-scrollbar-thumb {
+      background: var(--primary-color);
+      border-radius: var(--radius-sm);
+    }
+
+    .chat-box::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-dark);
+    }
+
+    .input-container {
+      padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
+      background: var(--bg-glass);
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .input-row {
+      display: flex;
+      gap: var(--space-md);
+      align-items: flex-end;
+    }
+
+    .message-input {
+      flex: 1;
+      padding: var(--space-md) var(--space-lg);
+      border: 2px solid #E5E7EB;
+      border-radius: var(--radius-xl);
+      outline: none;
+      font-size: 1rem;
+      font-family: 'Open Sans', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease-in-out;
+      resize: none;
+      min-height: 20px;
+      max-height: 100px;
+      line-height: 1.5;
+    }
+
+    .message-input::placeholder {
+      color: var(--text-light);
+    }
+
+    .message-input:focus {
+      border-color: var(--primary-color);
+      background: var(--bg-secondary);
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+    }
+
+    .send-btn {
+      padding: var(--space-md);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: var(--text-white);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all 0.3s ease-in-out;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+    }
+
+    .send-btn:disabled {
+      background: var(--text-light);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .msg {
+      margin-bottom: 15px;
+      animation: slideIn 0.35s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .msg.user {
+      text-align: right;
+    }
+
+    .msg.bot {
+      text-align: left;
+    }
+
+    .msg-content {
+      display: inline-block;
+      max-width: 80%;
+      padding: var(--space-sm) var(--space-lg);
+      border-radius: var(--radius-lg);
+      word-wrap: break-word;
+      line-height: 1.5;
+      font-weight: 400;
+      font-family: 'Open Sans', sans-serif;
+    }
+
+    .msg.user .msg-content {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: var(--text-white);
+      border-bottom-right-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+    }
+
+    .msg.bot .msg-content {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid #E5E7EB;
+      border-bottom-left-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .msg-label {
+      font-size: 0.75rem;
+      opacity: 0.7;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-lg);
+      background: linear-gradient(135deg, #f8fafc 0%, #e7f3ff 100%);
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      border-radius: var(--radius-lg);
+      border-bottom-left-radius: var(--radius-sm);
+      max-width: 80%;
+      animation: slideIn 0.35s ease, pulse 2s infinite;
+      box-shadow: var(--shadow-sm), 0 0 20px rgba(108, 99, 255, 0.1);
+    }
+
+    @keyframes pulse {
+      0%, 100% { 
+        box-shadow: var(--shadow-sm), 0 0 20px rgba(108, 99, 255, 0.1);
+      }
+      50% { 
+        box-shadow: var(--shadow-md), 0 0 30px rgba(108, 99, 255, 0.2);
+      }
+    }
+
+    .thinking-text {
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-right: var(--space-xs);
+      animation: fadeInOut 2s infinite;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      30% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+      margin-top: var(--space-md);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quick-btn {
+      padding: var(--space-sm) var(--space-md);
+      /* The gradient now includes the hover colors and the original background color */
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 50%, var(--bg-secondary) 51%);
+      background-size: 250% 250%;
+      background-position: 100% 100%;
+      border: 2px solid #E5E7EB;
+      border-radius: var(--radius-xl);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: 'Open Sans', sans-serif;
+      font-weight: 500;
+      transition: all 0.4s ease-in-out;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .quick-btn:hover {
+      border-color: var(--primary-color);
+      background-position: 0% 0%;
+      color: var(--text-white);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .quick-btn i {
+      font-size: 1rem;
+    }
+
+    .welcome-message {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: var(--space-2xl) var(--space-lg);
+      border: 2px dashed #D1D5DB;
+      border-radius: var(--radius-md);
+      margin: var(--space-lg) 0 var(--space-lg) 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(108, 99, 255, 0.02);
+      cursor: default;
+      user-select: text;
+    }
+
+    .welcome-message h3 {
+      margin: 0 0 var(--space-md) 0;
+      color: var(--text-primary);
+      font-size: 1.3rem;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .welcome-message p {
+      margin: var(--space-xs) 0;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .welcome-message h3 .fa-cat {
+      display: inline-block; /* Needed for transforms to work */
+      transition: transform 0.2s ease-in-out;
+      cursor: pointer; /* Indicates it's interactive */
+      color: var(--primary-color);
+    }
+
+    .welcome-message h3 .fa-cat:hover {
+      animation: catBounce 0.6s ease-in-out;
+    }
+
+    /* Also target the full Font Awesome class */
+    .welcome-message h3 .fas.fa-cat {
+      display: inline-block;
+      transition: transform 0.2s ease-in-out;
+      cursor: pointer;
+      color: var(--primary-color);
+    }
+
+    .welcome-message h3 .fas.fa-cat:hover {
+      animation: catBounce 0.6s ease-in-out;
+    }
+
+    @keyframes catBounce {
+      0% { transform: translateY(0) scale(1) rotate(0deg); }
+      15% { transform: translateY(-12px) scale(1.15) rotate(-5deg); }
+      30% { transform: translateY(-6px) scale(1.08) rotate(3deg); }
+      45% { transform: translateY(-10px) scale(1.12) rotate(-2deg); }
+      60% { transform: translateY(-4px) scale(1.05) rotate(1deg); }
+      75% { transform: translateY(-6px) scale(1.08) rotate(-1deg); }
+      90% { transform: translateY(-2px) scale(1.02) rotate(0deg); }
+      100% { transform: translateY(0) scale(1) rotate(0deg); }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 1024px) {
+      .chat-container {
+        width: 95vw;
+        max-width: 900px;
+      }
+      
+      .chat-box {
+        padding: var(--space-xl) var(--space-xl);
+      }
+      
+      .input-container {
+        padding: var(--space-lg) var(--space-xl) var(--space-xl);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .chat-container {
+        width: 95vw;
+        max-width: none;
+        height: 90vh;
+        margin: var(--space-lg) auto;
+        border-radius: var(--radius-md);
+      }
+
+      .chat-title {
+        font-size: 1.8rem;
+      }
+
+      .chat-subtitle {
+        font-size: 0.9rem;
+      }
+
+      .chat-box {
+        padding: var(--space-lg) var(--space-xl);
+      }
+      
+      .input-container {
+        padding: var(--space-md) var(--space-xl) var(--space-xl);
+      }
+
+      .message-input {
+        font-size: 0.95rem;
+      }
+
+      .msg-content {
+        max-width: 85%;
+        font-size: 0.95rem;
+      }
+
+      .quick-btn {
+        font-size: 0.85rem;
+        padding: var(--space-xs) var(--space-sm);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .chat-container {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        border-radius: 0;
+        border: none;
+      }
+
+      .chat-header {
+        padding: var(--space-lg) var(--space-md);
+      }
+
+      .chat-title {
+        font-size: 1.5rem;
+      }
+
+      .pest-emoji i {
+        font-size: 2rem;
+      }
+
+      .chat-box {
+        padding: var(--space-md);
+      }
+      
+      .input-container {
+        padding: var(--space-sm) var(--space-md) var(--space-md);
+      }
+
+      .input-row {
+        gap: var(--space-xs);
+      }
+
+      .send-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+      }
+
+      .msg-content {
+        max-width: 90%;
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.9rem;
+      }
+
+      .quick-actions {
+        gap: var(--space-xs);
+      }
+
+      .quick-btn {
+        font-size: 0.8rem;
+        padding: var(--space-xs);
+      }
+
+      .quick-btn i {
+        font-size: 0.9rem;
+      }
+
+      .welcome-message {
+        padding: var(--space-lg) var(--space-md);
+        margin: var(--space-md) 0;
+      }
+
+      .welcome-message h3 {
+        font-size: 1.1rem;
+      }
+
+      .welcome-message p {
+        font-size: 0.85rem;
+      }
+    }
+
+    /* AI Badge Styles */
+    .ai-badge {
+      position: fixed;
+      top: var(--space-lg);
+      left: var(--space-lg);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: var(--text-white);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-lg);
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      box-shadow: var(--shadow-md);
+      animation: aiGlow 3s infinite;
+      z-index: 1000;
+    }
+
+    @keyframes aiGlow {
+      0%, 100% { 
+        box-shadow: var(--shadow-md), 0 0 10px rgba(108, 99, 255, 0.3);
+      }
+      50% { 
+        box-shadow: var(--shadow-lg), 0 0 20px rgba(108, 99, 255, 0.5);
+      }
+    }
+
+    .ai-badge i {
+      font-size: 0.8rem;
+      animation: rotate 4s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Typewriter effect */
+    .typewriter {
+      overflow: hidden;
+      border-right: 2px solid var(--primary-color);
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { border-color: var(--primary-color); }
+      51%, 100% { border-color: transparent; }
+    }
+
+    .confidence-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      margin-top: var(--space-xs);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .confidence-indicator i {
+      color: var(--accent-color);
+      animation: pulse 2s infinite;
+    }
+
+    /* Mobile responsiveness for AI Badge */
+    @media (max-width: 768px) {
+      .ai-badge {
+        top: var(--space-md);
+        left: var(--space-md);
+        font-size: 0.7rem;
+        padding: var(--space-xs);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .ai-badge {
+        top: var(--space-sm);
+        left: var(--space-sm);
+        font-size: 0.65rem;
+        padding: 6px var(--space-xs);
+      }
+      
+      .ai-badge i {
+        font-size: 0.7rem;
+      }
+    }
+
+    /* Toast Notification Styles */
+    #login-toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.98);
+      background: linear-gradient(90deg, #6C63FF 60%, #F9A826 100%);
+      color: #fff;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(108,99,255,0.18);
+      padding: 0;
+      min-width: 320px;
+      max-width: 90vw;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s, transform 0.35s;
+    }
+    #login-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+      pointer-events: auto;
+    }
+    #login-toast .toast-content {
+      display: flex;
+      align-items: center;
+      gap: 1.1em;
+      padding: 1.1em 1.7em 1.1em 1.3em;
+    }
+    #login-toast .toast-emoji {
+      font-size: 1.6em;
+      margin-right: 0.2em;
+    }
+    #login-toast .toast-message {
+      font-size: 1.08em;
+      font-weight: 500;
+      flex: 1;
+      letter-spacing: 0.01em;
+    }
+    #login-toast .toast-login-btn {
+      background: #fff;
+      color: #6C63FF;
+      border: none;
+      border-radius: 1em;
+      font-size: 1em;
+      font-weight: 600;
+      padding: 0.5em 1.2em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(108,99,255,0.10);
+      transition: background 0.18s, color 0.18s;
+    }
+    #login-toast .toast-login-btn:hover {
+      background: #f3f4fe;
+      color: #5B52E8;
+    }
+  </style>
+</head>
+<body>
+  <!-- Modern Navbar/Header Start -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <span class="pet-logo" aria-label="Pet Clinic Logo"><i class="fa-solid fa-paw"></i></span>
+      <span class="clinic-title">Dr. Venky Pet Clinic</span>
+    </div>
+    <button class="navbar-toggle" aria-label="Open navigation" aria-expanded="false" tabindex="0">
+      <i class="fa fa-bars"></i>
+    </button>
+    <nav class="navbar-right" aria-label="Main navigation" id="navbar-auth">
+      <!-- Auth buttons will be populated by JavaScript based on login status -->
+      <a href="login.html" class="nav-btn nav-login" tabindex="0" aria-label="Login">
+        <i class="fa fa-sign-in-alt"></i>
+        <span>Login</span>
+      </a>
+      <a href="login.html?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
+        <i class="fa fa-user-plus"></i>
+        <span>Register</span>
+      </a>
+    </nav>
+  </header>
+  <!-- Optional Welcome Banner -->
+  <div class="welcome-banner">
+    <span>🐾 Welcome! We're here for your pet's health and happiness. 🐾</span>
+  </div>
+  <style>
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, #fff 60%, #f3f4fe 100%);
+      box-shadow: 0 4px 18px rgba(108, 99, 255, 0.08);
+      padding: 0.7rem 2rem;
+      position: relative;
+      z-index: 10;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .pet-logo {
+      font-size: 2rem;
+      color: #6C63FF;
+      background: #f3f4fe;
+      border-radius: 50%;
+      padding: 0.3rem 0.5rem;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease-in-out;
+    }
+    
+    /* Smaller pet logo when chatting */
+    .navbar.chatting .pet-logo {
+      font-size: 1.5rem;
+      padding: 0.2rem 0.35rem;
+    }
+    
+    .clinic-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #333;
+      letter-spacing: -0.5px;
+      user-select: none;
+      transition: all 0.3s ease-in-out;
+    }
+    
+    /* Smaller clinic title when chatting */
+    .navbar.chatting .clinic-title {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+    
+    /* Hide clinic title completely on very small screens when chatting */
+    @media (max-width: 480px) {
+      .navbar.chatting .clinic-title {
+        display: none;
+      }
+    }
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.45em 1.1em;
+      border-radius: 1.5em;
+      border: 2px solid #6C63FF;
+      text-decoration: none;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(108, 99, 255, 0.07);
+    }
+    .nav-login {
+      background: #fff;
+      color: #6C63FF;
+      border: 2px solid #6C63FF;
+    }
+    .nav-login:hover, .nav-login:focus {
+      background: #f3f4fe;
+      color: #5B52E8;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.13);
+    }
+    .nav-register {
+      background: linear-gradient(90deg, #6C63FF 60%, #F9A826 100%);
+      color: #fff;
+      border: 2px solid #6C63FF;
+      box-shadow: 0 2px 8px rgba(249, 168, 38, 0.10);
+    }
+    .nav-register:hover, .nav-register:focus {
+      background: linear-gradient(90deg, #5B52E8 60%, #FBB944 100%);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(249, 168, 38, 0.13);
+    }
+    .nav-profile {
+      background: #fff;
+      color: #6C63FF;
+      border: 2px solid #6C63FF;
+    }
+    .nav-profile:hover, .nav-profile:focus {
+      background: #f3f4fe;
+      color: #5B52E8;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.13);
+    }
+    .nav-signout {
+      background: linear-gradient(90deg, #ef4444 60%, #dc2626 100%);
+      color: #fff;
+      border: 2px solid #ef4444;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.10);
+    }
+    .nav-signout:hover, .nav-signout:focus {
+      background: linear-gradient(90deg, #dc2626 60%, #b91c1c 100%);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.13);
+    }
+    .nav-btn i {
+      font-size: 1.1em;
+    }
+    .navbar-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: #6C63FF;
+      cursor: pointer;
+      margin-left: 1rem;
+      outline: none;
+      transition: color 0.18s;
+    }
+    .navbar-toggle:focus, .navbar-toggle:hover {
+      color: #F9A826;
+    }
+    .welcome-banner {
+      width: 100%;
+      background: linear-gradient(90deg, #f3f4fe 60%, #fff 100%);
+      color: #6C63FF;
+      text-align: center;
+      font-size: 1.08rem;
+      font-weight: 600;
+      padding: 0.7em 0;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.04);
+      margin-bottom: 0.5rem;
+      user-select: none;
+    }
+    @media (max-width: 700px) {
+      .navbar {
+        flex-wrap: wrap;
+        padding: 0.7rem 1rem;
+      }
+      .navbar-left {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+        margin-bottom: 0.5rem;
+      }
+      .navbar-right {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: #fff;
+        position: absolute;
+        top: 100%;
+        right: 1rem;
+        min-width: 150px;
+        border-radius: 1em;
+        box-shadow: 0 4px 18px rgba(108, 99, 255, 0.13);
+        padding: 0.7em 0.5em;
+        z-index: 100;
+      }
+      .navbar-toggle {
+        display: block;
+      }
+      .navbar.open .navbar-right {
+        display: flex;
+      }
+    }
+    .nav-btn:focus-visible {
+      outline: 3px solid #F9A826;
+      outline-offset: 2px;
+    }
+  </style>
+  <script>
+    // Initial mobile menu setup (will be re-initialized by updateNavbar)
+    function initializeMobileMenuInitial() {
+      const navbar = document.querySelector('.navbar');
+      const toggle = document.querySelector('.navbar-toggle');
+      const navRight = document.querySelector('.navbar-right');
+      if (toggle && navRight) {
+        toggle.addEventListener('click', () => {
+          navbar.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+        });
+        toggle.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle.click();
+          }
+        });
+      }
+    }
+    initializeMobileMenuInitial();
+  </script>
+  <div class="floating-elements">
+    <div class="floating-paw">🐾</div>
+    <div class="floating-paw">🐾</div>
+    <div class="floating-heart">❤️</div>
+    <div class="floating-star">⭐</div>
+  </div>
+  
+  <!-- Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb pink"></div>
+    <div class="orb violet"></div>
+    <div class="orb blue"></div>
+    <div class="orb green"></div>
+  </div>
+  
+  <!-- WebGL Canvas for effects -->
+  <canvas id="webgl-canvas"></canvas>
+  
+  <div class="main-container">
+    <div class="chat-container">
+    <div class="chat-header">
+      <button id="home-btn" class="home-btn">
+        <i class="fas fa-home"></i>
+        Home
+      </button>
+      <div class="pest-emoji">
+        <i class="fas fa-paw"></i>
+      </div>
+      <h1 class="chat-title">Dr. Venky Pet Clinic</h1>
+      <p class="chat-subtitle">24/7 Pet Care Assistant & Appointment Booking</p>
+    </div>
+    
+    <div class="chat-box" id="chat">
+      <div class="welcome-message">
+        <h3>
+          <i class="fas fa-heart" style="color: var(--accent-color);"></i>
+          Welcome to Dr. Venky Pet Clinic!
+          <i class="fas fa-cat"></i>
+        </h3>
+        <p>I'm here to help you with:</p>
+        <p>• Book appointments</p>
+        <p>• Pet care advice</p>
+        <p>• Service information</p>
+        <p>• Emergency guidance</p>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="sendQuickMessage('I want to book an appointment')">
+          <i class="fas fa-calendar-plus"></i>
+          Book Appointment
+        </button>
+        <button class="quick-btn" onclick="sendQuickMessage('What services do you offer?')">
+          <i class="fas fa-clipboard-list"></i>
+          Services
+        </button>
+        <button class="quick-btn" onclick="sendQuickMessage('Emergency help needed')">
+          <i class="fas fa-exclamation-triangle"></i>
+          Emergency
+        </button>
+        <button class="quick-btn" onclick="sendQuickMessage('Pet care tips')">
+          <i class="fas fa-lightbulb"></i>
+          Care Tips
+        </button>
+      </div>
+    </div>
+    
+    <div class="typing-indicator" id="typing-indicator" style="display: none;">
+      <span class="thinking-text" id="thinking-text">🤖 Thinking...</span>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+    
+    <div class="input-container">
+      <div class="input-row">
+        <textarea id="message" placeholder="Ask about pet care, book appointments, or get advice..." class="message-input" rows="1"></textarea>
+        <button id="send" class="send-btn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- AI Badge -->
+    <div class="ai-badge">
+      <i class="fas fa-brain"></i>
+      Powered by AI
+    </div>
+    </div>
+  </div>
+  
+  <script>
+    const chat = document.getElementById('chat');
+    const messageInput = document.getElementById('message');
+    const sendBtn = document.getElementById('send');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const thinkingText = document.getElementById('thinking-text');
+    const homeBtn = document.getElementById('home-btn');
+
+    // Store the initial chat content
+    const initialChatContent = chat.innerHTML;
+
+    // Thinking messages for AI personality
+    const thinkingMessages = [
+      '🤖 Analyzing your question...',
+      '💡 Processing pet care data...',
+      '🔍 Searching my knowledge base...',
+      '⚡ Generating personalized advice...',
+      '🎯 Finding the best solution...',
+      '🧠 AI thinking deeply...',
+      '💭 Considering all options...',
+      '🔬 Analyzing pet health patterns...'
+    ];
+
+    let currentThinkingIndex = 0;
+    let thinkingInterval;
+
+    let isLoggedIn = false;
+    let currentUser = null;
+    
+    // Check login status on page load
+    async function checkLoginStatus() {
+      try {
+        const res = await fetch('/user', { credentials: 'include' });
+        const data = await res.json();
+        isLoggedIn = !!data.logged_in;
+        currentUser = data.user || null;
+        updateNavbar();
+      } catch (e) {
+        isLoggedIn = false;
+        currentUser = null;
+        updateNavbar();
+      }
+    }
+    
+    // Update navbar based on login status
+    function updateNavbar() {
+      const navbarAuth = document.getElementById('navbar-auth');
+      
+      if (isLoggedIn && currentUser) {
+        navbarAuth.innerHTML = `
+          <a href="profile.html" class="nav-btn nav-profile" tabindex="0" aria-label="My Profile">
+            <i class="fa fa-user"></i>
+            <span>My Profile</span>
+          </a>
+          <button onclick="signOut()" class="nav-btn nav-signout" tabindex="0" aria-label="Sign Out">
+            <i class="fa fa-sign-out-alt"></i>
+            <span>Sign Out</span>
+          </button>
+        `;
+      } else {
+        navbarAuth.innerHTML = `
+          <a href="login.html" class="nav-btn nav-login" tabindex="0" aria-label="Login">
+            <i class="fa fa-sign-in-alt"></i>
+            <span>Login</span>
+          </a>
+          <a href="login.html?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
+            <i class="fa fa-user-plus"></i>
+            <span>Register</span>
+          </a>
+        `;
+      }
+      
+      // Re-initialize mobile menu toggle after navbar update
+      initializeMobileMenu();
+    }
+    
+    // Initialize mobile menu functionality
+    function initializeMobileMenu() {
+      const navbar = document.querySelector('.navbar');
+      const toggle = document.querySelector('.navbar-toggle');
+      const navRight = document.querySelector('.navbar-right');
+      
+      if (toggle && navRight) {
+        // Remove any existing event listeners
+        toggle.replaceWith(toggle.cloneNode(true));
+        const newToggle = document.querySelector('.navbar-toggle');
+        
+        newToggle.addEventListener('click', () => {
+          navbar.classList.toggle('open');
+          newToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+        });
+        
+        newToggle.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            newToggle.click();
+          }
+        });
+      }
+    }
+    
+    // Sign out function
+    async function signOut() {
+      try {
+        await fetch('/logout', { method: 'POST', credentials: 'include' });
+        isLoggedIn = false;
+        currentUser = null;
+        updateNavbar();
+        // Optionally show a message or redirect
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('Error signing out:', error);
+        window.location.href = 'login.html';
+      }
+    }
+    
+    // Initialize login status check
+    checkLoginStatus();
+    
+    // Optionally, re-check after login/logout events if needed
+
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    function appendMessage(text, sender, useTypewriter = false) {
+      // Remove welcome message if it exists and show home button
+      const welcomeMsg = document.querySelector('.welcome-message');
+      if (welcomeMsg && sender === 'user') {
+        welcomeMsg.remove();
+        const quickActions = document.querySelector('.quick-actions');
+        if (quickActions) quickActions.remove();
+        homeBtn.classList.add('show');
+        
+        // Add chatting class to navbar when user starts chatting
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+          navbar.classList.add('chatting');
+        }
+      }
+
+      const div = document.createElement('div');
+      div.className = 'msg ' + sender;
+      
+      const content = document.createElement('div');
+      content.className = 'msg-content';
+      
+      if (sender === 'user') {
+        content.innerHTML = text;
+        div.appendChild(content);
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      } else {
+        div.appendChild(content);
+        chat.appendChild(div);
+        
+        if (useTypewriter) {
+          // Add typewriter class for cursor effect
+          content.classList.add('typewriter');
+          
+          // Format text with markdown-like formatting
+          let formattedText = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+          
+          // Typewriter effect
+          let index = 0;
+          const typeSpeed = 30; // milliseconds per character
+          
+          const typeWriter = () => {
+            if (index < formattedText.length) {
+              // Handle HTML tags properly
+              if (formattedText[index] === '<') {
+                const tagEnd = formattedText.indexOf('>', index);
+                if (tagEnd !== -1) {
+                  content.innerHTML = formattedText.substring(0, tagEnd + 1);
+                  index = tagEnd + 1;
+                } else {
+                  content.innerHTML = formattedText.substring(0, index + 1);
+                  index++;
+                }
+              } else {
+                content.innerHTML = formattedText.substring(0, index + 1);
+                index++;
+              }
+              chat.scrollTop = chat.scrollHeight;
+              setTimeout(typeWriter, typeSpeed);
+            } else {
+              // Remove typewriter cursor when done
+              content.classList.remove('typewriter');
+              
+              // Add confidence indicator
+              const confidenceDiv = document.createElement('div');
+              confidenceDiv.className = 'confidence-indicator';
+              confidenceDiv.innerHTML = '<i class="fas fa-check-circle"></i> AI-powered response';
+              content.appendChild(confidenceDiv);
+            }
+          };
+          
+          typeWriter();
+        } else {
+          // Regular instant display
+          let formattedText = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+          content.innerHTML = formattedText;
+          chat.scrollTop = chat.scrollHeight;
+        }
+      }
+    }
+
+    function resetChat() {
+      chat.innerHTML = initialChatContent;
+      homeBtn.classList.remove('show');
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      hideTyping();
+      
+      // Remove chatting class from navbar when returning to welcome screen
+      const navbar = document.querySelector('.navbar');
+      if (navbar) {
+        navbar.classList.remove('chatting');
+      }
+    }
+
+    function showTyping() {
+      typingIndicator.style.display = 'flex';
+      currentThinkingIndex = 0;
+      updateThinkingMessage();
+      
+      // Cycle through thinking messages
+      thinkingInterval = setInterval(() => {
+        currentThinkingIndex = (currentThinkingIndex + 1) % thinkingMessages.length;
+        updateThinkingMessage();
+      }, 2000);
+      
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function updateThinkingMessage() {
+      thinkingText.textContent = thinkingMessages[currentThinkingIndex];
+    }
+
+    function hideTyping() {
+      typingIndicator.style.display = 'none';
+      if (thinkingInterval) {
+        clearInterval(thinkingInterval);
+        thinkingInterval = null;
+      }
+    }
+
+    // Toast notification for login required
+    function showLoginToast() {
+      // Remove existing toast if present
+      const oldToast = document.getElementById('login-toast');
+      if (oldToast) oldToast.remove();
+      
+      const toast = document.createElement('div');
+      toast.id = 'login-toast';
+      toast.innerHTML = `
+        <div class="toast-content">
+          <span class="toast-emoji">🚫</span>
+          <span class="toast-message">You must be logged in to use the chatbot.</span>
+          <button class="toast-login-btn" id="toast-login-btn">Login Now</button>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => toast.classList.add('show'), 10);
+      
+      // Remove on click outside or after 5s
+      setTimeout(() => {
+        if (toast.parentNode) toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);
+      }, 5000);
+      
+      // Always attach event after DOM update
+      setTimeout(() => {
+        const loginBtn = document.getElementById('toast-login-btn');
+        if (loginBtn) {
+          loginBtn.onclick = (e) => {
+            e.preventDefault();
+            window.location.href = 'login.html';
+          };
+        }
+      }, 20);
+    }
+    
+    // Add toast styles
+    const toastStyle = document.createElement('style');
+    toastStyle.textContent = `
+      #login-toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.98);
+        background: linear-gradient(90deg, #6C63FF 60%, #F9A826 100%);
+        color: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 32px rgba(108,99,255,0.18);
+        padding: 0;
+        min-width: 320px;
+        max-width: 90vw;
+        z-index: 9999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s, transform 0.35s;
+      }
+      #login-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+        pointer-events: auto;
+      }
+      #login-toast .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 1.1em;
+        padding: 1.1em 1.7em 1.1em 1.3em;
+      }
+      #login-toast .toast-emoji {
+        font-size: 1.6em;
+        margin-right: 0.2em;
+      }
+      #login-toast .toast-message {
+        font-size: 1.08em;
+        font-weight: 500;
+        flex: 1;
+        letter-spacing: 0.01em;
+      }
+      #login-toast .toast-login-btn {
+        background: #fff;
+        color: #6C63FF;
+        border: none;
+        border-radius: 1em;
+        font-size: 1em;
+        font-weight: 600;
+        padding: 0.5em 1.2em;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(108,99,255,0.10);
+        transition: background 0.18s, color 0.18s;
+      }
+      #login-toast .toast-login-btn:hover {
+        background: #f3f4fe;
+        color: #5B52E8;
+      }
+    `;
+    document.head.appendChild(toastStyle);
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+      if (!isLoggedIn) {
+        showLoginToast();
+        return;
+      }
+      appendMessage(text, 'user');
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      sendBtn.disabled = true;
+      
+      showTyping();
+      
+      try {
+        const res = await fetch('http://localhost:3001/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        
+        // Add a minimum delay to show AI thinking
+        setTimeout(() => {
+          hideTyping();
+          appendMessage(data.reply, 'bot', true); // Enable typewriter effect
+        }, Math.max(1500, Math.random() * 1000 + 1000)); // 1.5-2s delay
+        
+      } catch (err) {
+        setTimeout(() => {
+          hideTyping();
+          appendMessage('Sorry, I\'m having trouble connecting. Please make sure the server is running on port 3001.', 'bot', true);
+        }, 1500);
+      }
+      
+      sendBtn.disabled = false;
+      messageInput.focus();
+    }
+
+    function sendQuickMessage(message) {
+      if (!isLoggedIn) {
+        showLoginToast();
+        return;
+      }
+      messageInput.value = message;
+      sendMessage();
+    }
+
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Home button functionality
+    homeBtn.onclick = resetChat;
+
+    // Focus on input when page loads
+    messageInput.focus();
+
+    // WebGL Particle Effects
+    class WebGLEffects {
+      constructor() {
+        this.canvas = document.getElementById('webgl-canvas');
+        this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+        
+        if (!this.gl) {
+          console.log('WebGL not supported, falling back to canvas effects');
+          this.fallbackToCanvas();
+          return;
+        }
+
+        this.particles = [];
+        this.particleCount = 80;
+        this.time = 0;
+        
+        this.initWebGL();
+        this.createParticles();
+        this.animate();
+        this.handleResize();
+      }
+
+      initWebGL() {
+        // Vertex shader for particles
+        const vertexShaderSource = `
+          attribute vec2 a_position;
+          attribute float a_size;
+          attribute float a_alpha;
+          uniform vec2 u_resolution;
+          uniform float u_time;
+          varying float v_alpha;
+          
+          void main() {
+            vec2 position = a_position;
+            position.x += sin(u_time * 0.0008 + a_position.y * 0.008) * 25.0;
+            position.y += cos(u_time * 0.0006 + a_position.x * 0.006) * 18.0;
+            
+            vec2 clipSpace = ((position / u_resolution) * 2.0) - 1.0;
+            gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+            gl_PointSize = a_size;
+            v_alpha = a_alpha;
+          }
+        `;
+
+        // Fragment shader for particles
+        const fragmentShaderSource = `
+          precision mediump float;
+          varying float v_alpha;
+          uniform float u_time;
+          
+          void main() {
+            vec2 center = gl_PointCoord - 0.5;
+            float dist = length(center);
+            
+            if (dist > 0.5) discard;
+            
+            float alpha = (1.0 - dist * 2.0) * v_alpha;
+            vec3 color = vec3(0.15 + sin(u_time * 0.0008) * 0.1, 
+                             0.65 + cos(u_time * 0.001) * 0.2, 
+                             0.95 + sin(u_time * 0.0006) * 0.05);
+            
+            // Add a soft glow effect
+            float glow = 1.0 - smoothstep(0.0, 0.5, dist);
+            alpha *= glow;
+            
+            gl_FragColor = vec4(color, alpha * 0.7);
+          }
+        `;
+
+        this.program = this.createProgram(vertexShaderSource, fragmentShaderSource);
+        this.gl.useProgram(this.program);
+
+        // Get attribute and uniform locations
+        this.positionLocation = this.gl.getAttribLocation(this.program, 'a_position');
+        this.sizeLocation = this.gl.getAttribLocation(this.program, 'a_size');
+        this.alphaLocation = this.gl.getAttribLocation(this.program, 'a_alpha');
+        this.resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
+        this.timeLocation = this.gl.getUniformLocation(this.program, 'u_time');
+
+        // Setup blending for transparency
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+      }
+
+      createShader(type, source) {
+        const shader = this.gl.createShader(type);
+        this.gl.shaderSource(shader, source);
+        this.gl.compileShader(shader);
+        
+        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+          console.error('Shader compilation error:', this.gl.getShaderInfoLog(shader));
+          this.gl.deleteShader(shader);
+          return null;
+        }
+        
+        return shader;
+      }
+
+      createProgram(vertexSource, fragmentSource) {
+        const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexSource);
+        const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, fragmentSource);
+        
+        const program = this.gl.createProgram();
+        this.gl.attachShader(program, vertexShader);
+        this.gl.attachShader(program, fragmentShader);
+        this.gl.linkProgram(program);
+        
+        if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+          console.error('Program linking error:', this.gl.getProgramInfoLog(program));
+          return null;
+        }
+        
+        return program;
+      }
+
+      createParticles() {
+        this.particles = [];
+        for (let i = 0; i < this.particleCount; i++) {
+          this.particles.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            size: Math.random() * 12 + 3,
+            alpha: Math.random() * 0.6 + 0.3,
+            speedX: (Math.random() - 0.5) * 0.3,
+            speedY: (Math.random() - 0.5) * 0.3,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+
+        // Create buffers
+        this.positionBuffer = this.gl.createBuffer();
+        this.sizeBuffer = this.gl.createBuffer();
+        this.alphaBuffer = this.gl.createBuffer();
+      }
+
+      updateParticles() {
+        this.particles.forEach(particle => {
+          particle.x += particle.speedX;
+          particle.y += particle.speedY;
+          
+          // Wrap around screen
+          if (particle.x < 0) particle.x = this.canvas.width;
+          if (particle.x > this.canvas.width) particle.x = 0;
+          if (particle.y < 0) particle.y = this.canvas.height;
+          if (particle.y > this.canvas.height) particle.y = 0;
+          
+          // Gentle pulsing alpha with individual phase
+          particle.alpha = 0.4 + Math.sin(this.time * 0.0015 + particle.phase) * 0.3;
+          
+          // Subtle size pulsing
+          particle.baseSize = particle.baseSize || particle.size;
+          particle.size = particle.baseSize + Math.sin(this.time * 0.001 + particle.phase) * 2;
+        });
+      }
+
+      render() {
+        this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        this.gl.clearColor(0, 0, 0, 0);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        // Update uniforms
+        this.gl.uniform2f(this.resolutionLocation, this.canvas.width, this.canvas.height);
+        this.gl.uniform1f(this.timeLocation, this.time);
+
+        // Prepare data arrays
+        const positions = new Float32Array(this.particles.length * 2);
+        const sizes = new Float32Array(this.particles.length);
+        const alphas = new Float32Array(this.particles.length);
+
+        this.particles.forEach((particle, i) => {
+          positions[i * 2] = particle.x;
+          positions[i * 2 + 1] = particle.y;
+          sizes[i] = particle.size;
+          alphas[i] = particle.alpha;
+        });
+
+        // Upload position data
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
+        this.gl.enableVertexAttribArray(this.positionLocation);
+        this.gl.vertexAttribPointer(this.positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+        // Upload size data
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.sizeBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, sizes, this.gl.DYNAMIC_DRAW);
+        this.gl.enableVertexAttribArray(this.sizeLocation);
+        this.gl.vertexAttribPointer(this.sizeLocation, 1, this.gl.FLOAT, false, 0, 0);
+
+        // Upload alpha data
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.alphaBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, alphas, this.gl.DYNAMIC_DRAW);
+        this.gl.enableVertexAttribArray(this.alphaLocation);
+        this.gl.vertexAttribPointer(this.alphaLocation, 1, this.gl.FLOAT, false, 0, 0);
+
+        // Draw particles
+        this.gl.drawArrays(this.gl.POINTS, 0, this.particles.length);
+      }
+
+      animate() {
+        this.time = Date.now();
+        this.updateParticles();
+        this.render();
+        requestAnimationFrame(() => this.animate());
+      }
+
+      handleResize() {
+        const resizeCanvas = () => {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        };
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+      }
+
+      fallbackToCanvas() {
+        // Fallback 2D canvas effects for browsers without WebGL
+        const ctx = this.canvas.getContext('2d');
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        
+        const particles = Array.from({ length: 60 }, () => ({
+          x: Math.random() * this.canvas.width,
+          y: Math.random() * this.canvas.height,
+          size: Math.random() * 6 + 2,
+          speedX: (Math.random() - 0.5) * 0.3,
+          speedY: (Math.random() - 0.5) * 0.3,
+          alpha: Math.random() * 0.4 + 0.2,
+          hue: Math.random() * 60 + 200 // Blue to cyan range
+        }));
+
+        const animate = () => {
+          ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          particles.forEach(particle => {
+            particle.x += particle.speedX;
+            particle.y += particle.speedY;
+            
+            // Gentle sine wave movement
+            particle.x += Math.sin(Date.now() * 0.0008 + particle.y * 0.01) * 0.5;
+            particle.y += Math.cos(Date.now() * 0.0006 + particle.x * 0.01) * 0.3;
+            
+            if (particle.x < 0) particle.x = this.canvas.width;
+            if (particle.x > this.canvas.width) particle.x = 0;
+            if (particle.y < 0) particle.y = this.canvas.height;
+            if (particle.y > this.canvas.height) particle.y = 0;
+            
+            // Pulsing alpha
+            const pulseAlpha = particle.alpha + Math.sin(Date.now() * 0.002) * 0.2;
+            
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${particle.hue}, 70%, 60%, ${pulseAlpha})`;
+            ctx.fill();
+            
+            // Add a subtle glow
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${particle.hue}, 70%, 60%, ${pulseAlpha * 0.1})`;
+            ctx.fill();
+          });
+          
+          requestAnimationFrame(animate);
+        };
+        
+        animate();
+      }
+    }
+
+    // Initialize WebGL effects
+    window.addEventListener('load', () => {
+      new WebGLEffects();
+    });
+
+    // --- Login/Logout UI Logic ---
+    async function updateAuthUI() {
+      const res = await fetch('/user', { credentials: 'include' });
+      const data = await res.json();
+      const loginLink = document.getElementById('login-link');
+      const registerLink = document.getElementById('register-link');
+      const logoutBtn = document.getElementById('logout-btn');
+      const userInfo = document.getElementById('user-info');
+      const adminLink = document.getElementById('admin-link');
+      if (data.logged_in) {
+        loginLink.style.display = 'none';
+        registerLink.style.display = 'none';
+        logoutBtn.style.display = '';
+        userInfo.style.display = '';
+        userInfo.textContent = `👤 ${data.user.username} (${data.user.role})`;
+        if (data.user.role === 'admin') {
+          adminLink.style.display = '';
+        } else {
+          adminLink.style.display = 'none';
+        }
+      } else {
+        loginLink.style.display = '';
+        registerLink.style.display = '';
+        logoutBtn.style.display = 'none';
+        userInfo.style.display = 'none';
+        adminLink.style.display = 'none';
+      }
+    }
+    updateAuthUI();
+    document.getElementById('logout-btn').onclick = async () => {
+      await fetch('/logout', { method: 'POST', credentials: 'include' });
+      window.location.reload();
+    };
+  </script>
+</body>
+</html>
