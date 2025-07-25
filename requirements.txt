@@ -1,6 +1,7 @@
-flask
-flask-cors
-openai
-python-dotenv
-bcrypt
-twilio
+flask==3.0.3
+flask-cors==4.0.1
+python-dotenv==1.0.1
+openai==1.35.12
+bcrypt==4.1.3
+twilio==9.2.0
+requests==2.32.3

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import re
 import bcrypt
 from twilio.rest import Client
+import sqlite3
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -34,22 +35,10 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
 
-# Simple in-memory storage for appointments (in production, use a database)
-appointments = []
-
-def save_appointments():
-    """Save appointments to a JSON file"""
-    with open('appointments.json', 'w') as f:
-        json.dump(appointments, f, indent=2, default=str)
-
-def load_appointments():
-    """Load appointments from JSON file"""
-    global appointments
-    try:
-        with open('appointments.json', 'r') as f:
-            appointments = json.load(f)
-    except FileNotFoundError:
-        appointments = []
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def send_whatsapp_notification(appointment_data):
     """Send WhatsApp notification to admin about new appointment"""
@@ -147,44 +136,21 @@ def generate_available_slots():
     """Generate available appointment slots for the next 7 days"""
     available_slots = []
     base_date = datetime.now().date() + timedelta(days=1)  # Start from tomorrow
-    
+    with get_db_connection() as conn:
+        appointments = conn.execute('SELECT date, time FROM appointments').fetchall()
+        booked = set((apt['date'], apt['time']) for apt in appointments)
     for i in range(7):  # Next 7 days
         current_date = base_date + timedelta(days=i)
         if current_date.weekday() < 6:  # Monday to Saturday (0-5)
             for hour in range(9, 18):  # 9 AM to 5 PM
                 slot_time = f"{hour:02d}:00"
-                # Check if slot is already booked
-                is_booked = any(
-                    apt['date'] == current_date.strftime('%Y-%m-%d') and 
-                    apt['time'] == slot_time 
-                    for apt in appointments
-                )
-                if not is_booked:
+                if (current_date.strftime('%Y-%m-%d'), slot_time) not in booked:
                     available_slots.append({
                         'date': current_date.strftime('%Y-%m-%d'),
                         'time': slot_time,
                         'day': current_date.strftime('%A')
                     })
-    
     return available_slots[:10]  # Return first 10 available slots
-
-def load_users():
-    try:
-        with open('users.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-
-def save_users(users):
-    with open('users.json', 'w') as f:
-        json.dump(users, f, indent=2)
-
-def get_user_by_username_or_email(username_or_email):
-    users = load_users()
-    for user in users:
-        if user['username'] == username_or_email or user['email'] == username_or_email:
-            return user
-    return None
 
 def is_admin():
     return session.get('user') and session['user'].get('role') == 'admin'
@@ -192,40 +158,71 @@ def is_admin():
 def is_logged_in():
     return 'user' in session
 
+def init_db():
+    with get_db_connection() as conn:
+        conn.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user'
+        );
+        CREATE TABLE IF NOT EXISTS appointments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          name TEXT,
+          pet_name TEXT NOT NULL,
+          phone TEXT,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          service TEXT DEFAULT 'General Consultation',
+          notes TEXT,
+          status TEXT DEFAULT 'scheduled',
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        ''')
+        # Insert initial test user if not exists
+        user = conn.execute("SELECT * FROM users WHERE username = ?", ('testuser',)).fetchone()
+        if not user:
+            import bcrypt
+            hashed_pw = bcrypt.hashpw('testpass'.encode(), bcrypt.gensalt()).decode()
+            conn.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+                         ('testuser', 'test@example.com', hashed_pw, 'user'))
+        # Insert initial test appointment if not exists
+        appointment = conn.execute("SELECT * FROM appointments WHERE pet_name = ?", ('Buddy',)).fetchone()
+        if not appointment:
+            user_id = conn.execute("SELECT id FROM users WHERE username = ?", ('testuser',)).fetchone()
+            user_id = user_id['id'] if user_id else None
+            conn.execute("""
+                INSERT INTO appointments (user_id, pet_name, phone, date, time, service, notes, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, 'Buddy', '1234567890', '2025-07-25', '10:00', 'General Consultation', 'First visit', 'scheduled'))
+        conn.commit()
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    print("Login attempt received:", data)  # Debug log
     username_or_email = data.get('username')
     password = data.get('password')
-    print(f"Looking for user: {username_or_email}")  # Debug log
-    
-    user = get_user_by_username_or_email(username_or_email)
-    print(f"User found: {user is not None}")  # Debug log
-    
-    if user:
-        print(f"Checking password for user: {user['username']}")  # Debug log
-        try:
-            password_match = bcrypt.checkpw(password.encode(), user['password'].encode())
-            print(f"Password match: {password_match}")  # Debug log
-            
-            if password_match:
-                session['user'] = {
-                    'username': user['username'],
-                    'email': user['email'],
-                    'role': user['role']
-                }
-                print(f"Login successful for user: {user['username']}, role: {user['role']}")  # Debug log
-                return jsonify({'success': True, 'role': user['role'], 'username': user['username']})
-            else:
-                print("Password does not match")  # Debug log
-                return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-        except Exception as e:
-            print(f"Password check error: {e}")  # Debug log
+    if not username_or_email or not password:
+        return jsonify({'success': False, 'message': 'Username/email and password are required.'}), 400
+    with get_db_connection() as conn:
+        user = conn.execute(
+            'SELECT * FROM users WHERE username = ? OR email = ?',
+            (username_or_email, username_or_email)
+        ).fetchone()
+        if user and bcrypt.checkpw(password.encode(), user['password'].encode()):
+            session['user'] = {
+                'username': user['username'],
+                'email': user['email'],
+                'role': user['role']
+            }
+            return jsonify({'success': True, 'role': user['role'], 'username': user['username']})
+        else:
             return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-    else:
-        print("User not found")  # Debug log
-        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -235,35 +232,26 @@ def logout():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    print("Registration attempt:", data)  # Debug logging
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
     role = data.get('role', 'user')
-    
-    print(f"Attempting to register user: {username}, email: {email}, role: {role}")
-    
+    if not username or not email or not password:
+        return jsonify({'success': False, 'message': 'Username, email, and password are required.'}), 400
     if role == 'admin' and (not is_logged_in() or not is_admin()):
-        print("Admin role requested but user not authorized")
         return jsonify({'success': False, 'message': 'Only admin can create admin users.'}), 403
-    
-    if get_user_by_username_or_email(username) or get_user_by_username_or_email(email):
-        print("User already exists")
-        return jsonify({'success': False, 'message': 'User already exists.'}), 409
-    
-    hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    users = load_users()
-    new_user = {
-        'username': username,
-        'email': email,
-        'password': hashed_pw,
-        'role': role
-    }
-    users.append(new_user)
-    print(f"Adding user to list: {new_user['username']}")
-    save_users(users)
-    print(f"Users saved. Total users now: {len(users)}")
-    return jsonify({'success': True})
+    with get_db_connection() as conn:
+        try:
+            conn.execute(
+                'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+                (username, email, bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode(), role)
+            )
+            conn.commit()
+            return jsonify({'success': True}), 201
+        except sqlite3.IntegrityError:
+            return jsonify({'success': False, 'message': 'User already exists.'}), 409
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Unexpected error: {str(e)}'}), 500
 
 @app.route('/user', methods=['GET'])
 def get_user():
@@ -301,66 +289,35 @@ def serve_css():
 def chat():
     data = request.get_json()
     user_message = data.get('message', '')
-    print("User message:", user_message)
-    
     if not user_message:
-        return jsonify({'reply': "Please enter a message."})
-    
-    # Check if this is an appointment request
+        return jsonify({'reply': "Please enter a message."}), 400
     appointment_info = extract_appointment_info(user_message)
-    
     if appointment_info.get('appointment'):
-        # This is an appointment request
         try:
-            # Generate appointment ID
-            apt_id = len(appointments) + 1
-            
-            # Create appointment object with safe fallbacks
-            new_appointment = {
-                'id': apt_id,
-                'name': appointment_info.get('name', 'Not provided') or 'Not provided',
-                'pet_name': appointment_info.get('pet_name', 'Not provided') or 'Not provided',
-                'phone': appointment_info.get('phone', 'Not provided') or 'Not provided',
-                'date': appointment_info.get('date') or 'Not specified',
-                'time': appointment_info.get('time') or 'Not specified',
-                'service': appointment_info.get('service', 'General consultation') or 'General consultation',
-                'notes': appointment_info.get('notes', '') or '',
-                'status': 'scheduled',
-                'created_at': datetime.now().isoformat()
-            }
-            
-            appointments.append(new_appointment)
-            save_appointments()
-            
-            # Debug logging for notification
-            print(f"Attempting to send WhatsApp notification for appointment #{apt_id}")
-            print(f"Appointment data: {new_appointment}")
-            
-            # Send WhatsApp notification to admin
-            notification_sent = send_whatsapp_notification(new_appointment)
-            
-            # Include notification status in response
-            notification_status = "✅ Admin notified via WhatsApp" if notification_sent else "⚠️ Admin notification failed"
-            print(f"Notification result: {notification_status}")
-            
-            reply = f"""✅ Appointment booked successfully!
-
-📋 **Appointment Details:**
-- **ID:** #{apt_id}
-- **Pet Owner:** {new_appointment['name']}
-- **Pet Name:** {new_appointment['pet_name']}
-- **Date:** {new_appointment['date']}
-- **Time:** {new_appointment['time']}
-- **Service:** {new_appointment['service']}
-
-📞 We'll call you if we need to confirm any details.
-{notification_status}
-Thank you for choosing Dr. Venky Pet Clinic!"""
-            
+            with get_db_connection() as conn:
+                cur = conn.execute(
+                    'INSERT INTO appointments (name, pet_name, phone, date, time, service, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    (
+                        appointment_info.get('name', 'Not provided'),
+                        appointment_info.get('pet_name', 'Not provided'),
+                        appointment_info.get('phone', 'Not provided'),
+                        appointment_info.get('date'),
+                        appointment_info.get('time'),
+                        appointment_info.get('service', 'General consultation'),
+                        appointment_info.get('notes', ''),
+                        'scheduled',
+                        datetime.now().isoformat()
+                    )
+                )
+                apt_id = cur.lastrowid
+                conn.commit()
+                new_appointment = conn.execute('SELECT * FROM appointments WHERE id = ?', (apt_id,)).fetchone()
+                notification_sent = send_whatsapp_notification(dict(new_appointment))
+                notification_status = "✅ Admin notified via WhatsApp" if notification_sent else "⚠️ Admin notification failed"
+                reply = f"""✅ Appointment booked successfully!\n\n📋 **Appointment Details:**\n- **ID:** #{apt_id}\n- **Pet Owner:** {new_appointment['name']}\n- **Pet Name:** {new_appointment['pet_name']}\n- **Date:** {new_appointment['date']}\n- **Time:** {new_appointment['time']}\n- **Service:** {new_appointment['service']}\n\n📞 We'll call you if we need to confirm any details.\n{notification_status}\nThank you for choosing Dr. Venky Pet Clinic!"""
         except Exception as e:
             print("Appointment booking error:", str(e))
-            reply = "Sorry, there was an error booking your appointment. Please try again or call us directly."
-    
+            return jsonify({'reply': f"Sorry, there was an error booking your appointment: {str(e)}. Please try again or call us directly."}), 500
     else:
         # Regular chat - check if asking about appointments or availability
         if any(word in user_message.lower() for word in ['appointment', 'book', 'schedule', 'available', 'slots']):
@@ -415,28 +372,29 @@ Example: "I want to book an appointment for my dog Max tomorrow at 2pm, my name 
 @app.route('/appointments', methods=['GET'])
 def get_appointments():
     """Get all appointments - for clinic admin"""
-    return jsonify({
-        'appointments': appointments,
-        'total': len(appointments)
-    })
+    with get_db_connection() as conn:
+        appointments = conn.execute('SELECT * FROM appointments').fetchall()
+        appointments_list = [dict(apt) for apt in appointments]
+        return jsonify({'appointments': appointments_list, 'total': len(appointments_list)})
 
 @app.route('/appointments/<int:apt_id>', methods=['PUT'])
 def update_appointment(apt_id):
-    """Update appointment status"""
     data = request.get_json()
-    status = data.get('status', 'scheduled')
-    
-    for apt in appointments:
-        if apt['id'] == apt_id:
-            apt['status'] = status
-            apt['updated_at'] = datetime.now().isoformat()
-            save_appointments()
-            return jsonify({'message': 'Appointment updated successfully'})
-    
-    return jsonify({'error': 'Appointment not found'}), 404
-
-# Load existing appointments on startup
-load_appointments()
+    status = data.get('status')
+    if not status:
+        return jsonify({'error': 'Status is required'}), 400
+    with get_db_connection() as conn:
+        try:
+            result = conn.execute('UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?',
+                                 (status, datetime.now().isoformat(), apt_id))
+            conn.commit()
+            if result.rowcount:
+                return jsonify({'message': 'Appointment updated successfully'})
+            else:
+                return jsonify({'error': 'Appointment not found'}), 404
+        except Exception as e:
+            return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 if __name__ == '__main__':
+    init_db()
     app.run(port=3001, debug=True)

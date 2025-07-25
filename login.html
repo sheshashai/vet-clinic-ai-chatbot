@@ -599,4 +599,41 @@
     };
   </script>
 </body>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('loginForm');
+  const messageDiv = document.getElementById('loginMessage');
+  if (form) {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      messageDiv.textContent = '';
+      const formData = new FormData(form);
+      const payload = {
+        username: formData.get('username'),
+        password: formData.get('password')
+      };
+      try {
+        const resp = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          messageDiv.style.color = 'green';
+          messageDiv.textContent = 'Login successful! Redirecting...';
+          setTimeout(() => { window.location.href = '/profile.html'; }, 1000);
+        } else {
+          messageDiv.style.color = 'red';
+          messageDiv.textContent = data.message || 'Login failed.';
+        }
+      } catch (err) {
+        messageDiv.style.color = 'red';
+        messageDiv.textContent = 'Network error.';
+      }
+    });
+  }
+});
+</script>
 </html> 

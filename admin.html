@@ -396,7 +396,7 @@
 
         async function loadAppointments() {
             try {
-                const response = await fetch('http://localhost:3001/appointments');
+                const response = await fetch('/appointments', { credentials: 'include' });
                 const data = await response.json();
                 appointments = data.appointments || [];
                 updateStats();
@@ -498,10 +498,10 @@
                             <button class="btn btn-success btn-sm" onclick="updateAppointmentStatus(${appointment.id}, 'confirmed')">✅ Confirm</button>
                         ` : ''}
                         ${appointment.status !== 'completed' ? `
-                            <button class="btn btn-primary btn-sm" onclick="updateAppointmentStatus(${appointment.id}, 'completed')">✓ Complete</button>
+                            <button class="btn btn-warning btn-sm" onclick="updateAppointmentStatus(${appointment.id}, 'completed')">✔️ Complete</button>
                         ` : ''}
                         ${appointment.status !== 'cancelled' ? `
-                            <button class="btn btn-danger btn-sm" onclick="updateAppointmentStatus(${appointment.id}, 'cancelled')">✗ Cancel</button>
+                            <button class="btn btn-danger btn-sm" onclick="updateAppointmentStatus(${appointment.id}, 'cancelled')">❌ Cancel</button>
                         ` : ''}
                     </div>
                 </div>
@@ -512,7 +512,7 @@
 
         async function updateAppointmentStatus(appointmentId, newStatus) {
             try {
-                const response = await fetch(`http://localhost:3001/appointments/${appointmentId}`, {
+                const response = await fetch(`/appointments/${appointmentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -532,22 +532,14 @@
             }
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString();
         }
 
-        function formatTime(timeString) {
-            const [hours, minutes] = timeString.split(':');
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const displayHour = hour % 12 || 12;
-            return `${displayHour}:${minutes} ${ampm}`;
+        function formatTime(timeStr) {
+            return timeStr || '';
         }
 
         function refreshAppointments() {
@@ -561,19 +553,17 @@
                 return;
             }
 
-            const csvContent = "data:text/csv;charset=utf-8," 
-                + "ID,Owner Name,Pet Name,Phone,Date,Time,Service,Status,Notes,Created At\n"
-                + appointments.map(apt => 
-                    `${apt.id},"${apt.name}","${apt.pet_name}","${apt.phone}","${apt.date}","${apt.time}","${apt.service}","${apt.status}","${apt.notes || ''}","${apt.created_at}"`
-                ).join("\n");
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `appointments_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const csv = [
+                ['ID','Owner','Pet','Phone','Date','Time','Service','Status','Notes'],
+                ...appointments.map(a => [a.id,a.name,a.pet_name,a.phone,a.date,a.time,a.service,a.status,a.notes||''])
+            ].map(row => row.map(String).map(s => '"'+s.replace(/"/g,'""')+'"').join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'appointments.csv';
+            a.click();
+            URL.revokeObjectURL(url);
             
             showNotification('Appointments exported successfully!', 'success');
         }
@@ -604,27 +594,25 @@
         loadAppointments();
 
         // --- Admin Auth UI Logic ---
-        async function updateAdminAuthUI() {
+        async function checkAdminAuth() {
             const res = await fetch('/user', { credentials: 'include' });
             const data = await res.json();
-            const userInfo = document.getElementById('admin-user-info');
-            const navDiv = document.getElementById('admin-nav');
+            const user = data.user;
+            const nav = document.getElementById('admin-nav');
             const loginLink = document.getElementById('admin-login-link');
-            if (data.logged_in && data.user.role === 'admin') {
-                userInfo.style.display = '';
-                userInfo.textContent = `👤 ${data.user.username} (admin)`;
-                navDiv.style.display = 'flex';
+            const userInfo = document.getElementById('admin-user-info');
+            if (data.logged_in && user && user.role === 'admin') {
+                nav.style.display = '';
                 loginLink.style.display = 'none';
+                userInfo.style.display = '';
+                userInfo.textContent = `Logged in as: ${user.username} (admin)`;
             } else {
-                userInfo.style.display = 'none';
-                navDiv.style.display = 'none';
+                nav.style.display = 'none';
                 loginLink.style.display = '';
-                // Hide dashboard content if not admin
-                document.querySelector('.stats').style.display = 'none';
-                document.querySelector('.content').style.display = 'none';
+                userInfo.style.display = 'none';
             }
         }
-        updateAdminAuthUI();
+        checkAdminAuth();
         document.getElementById('admin-logout-btn').onclick = async () => {
             await fetch('/logout', { method: 'POST', credentials: 'include' });
             window.location.href = 'login.html';

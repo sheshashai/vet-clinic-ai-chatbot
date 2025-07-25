@@ -328,6 +328,11 @@
       </div>
     </div>
     
+    <div id="user-appointments-section" style="margin-top:2em;">
+      <h2 style="font-size:1.2em; color:#6C63FF;">My Appointments</h2>
+      <div id="user-appointments-list">Loading...</div>
+    </div>
+    
     <div class="profile-actions">
       <a href="index.html" class="btn btn-secondary">
         <i class="fas fa-home"></i> Back to Home
@@ -340,6 +345,29 @@
   
   <script>
     // Check if user is logged in and get user data
+    async function loadUserAppointments(email) {
+      try {
+        const res = await fetch('/appointments', { credentials: 'include' });
+        const data = await res.json();
+        const appts = (data.appointments || []).filter(a => a.email === email || a.email === undefined);
+        const listDiv = document.getElementById('user-appointments-list');
+        if (!appts.length) {
+          listDiv.innerHTML = '<div style="color:#888;">No appointments found.</div>';
+          return;
+        }
+        listDiv.innerHTML = appts.map(a => `
+          <div style="border:1px solid #eee; border-radius:8px; margin-bottom:10px; padding:10px;">
+            <strong>Date:</strong> ${a.date || 'N/A'}<br>
+            <strong>Time:</strong> ${a.time || 'N/A'}<br>
+            <strong>Pet:</strong> ${a.pet_name || 'N/A'}<br>
+            <strong>Service:</strong> ${a.service || 'N/A'}<br>
+            <strong>Status:</strong> ${a.status || 'N/A'}
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('user-appointments-list').innerHTML = '<div style="color:red;">Error loading appointments.</div>';
+      }
+    }
     async function loadProfile() {
       try {
         const res = await fetch('/user', { credentials: 'include' });
@@ -359,6 +387,7 @@
         
         // Update navbar
         updateNavbar(data.user);
+        await loadUserAppointments(data.user.email);
         
       } catch (error) {
         console.error('Error loading profile:', error);

@@ -51,15 +51,16 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
-*.mo
-*.pot
+# Environment variables (CRITICAL - Never commit real API keys)
+.env
+.env.local
+.env.production
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+# Database files (contains user data)
+database.db
+*.sqlite
+*.sqlite3
+*.db
 
 # Flask stuff:
 instance/
