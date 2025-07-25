@@ -3,9 +3,9 @@ services:
     name: vet-clinic-ai-chatbot
     runtime: python
     buildCommand: |
-      python -m pip install --upgrade pip
+      python3.11 -m pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
-    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT
+    startCommand: python -m gunicorn server:app -c gunicorn.conf.py
     plan: free
     envVars:
       - key: PYTHON_VERSION
