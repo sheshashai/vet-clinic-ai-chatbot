@@ -1652,7 +1652,7 @@
       showTyping();
       
       try {
-        const res = await fetch('http://localhost:3001/chat', {
+        const res = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text })
@@ -1668,7 +1668,7 @@
       } catch (err) {
         setTimeout(() => {
           hideTyping();
-          appendMessage('Sorry, I\'m having trouble connecting. Please make sure the server is running on port 3001.', 'bot', true);
+          appendMessage('Sorry, I\'m having trouble connecting to the server. Please try again in a moment.', 'bot', true);
         }, 1500);
       }
       
