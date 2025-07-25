@@ -2,8 +2,10 @@ services:
   - type: web
     name: vet-clinic-ai-chatbot
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn server:app
+    buildCommand: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT
     plan: free
     envVars:
       - key: PYTHON_VERSION
@@ -12,3 +14,5 @@ services:
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false
+      - key: FLASK_ENV
+        value: production

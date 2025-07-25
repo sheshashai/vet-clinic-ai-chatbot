@@ -11,7 +11,16 @@ from twilio.rest import Client
 import sqlite3
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# Initialize OpenAI client with error handling
+try:
+    openai_api_key = os.getenv('OPENAI_API_KEY')
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    client = OpenAI(api_key=openai_api_key)
+except Exception as e:
+    print(f"Warning: OpenAI client initialization failed: {e}")
+    client = None
 
 # Twilio configuration for WhatsApp notifications
 try:
@@ -100,6 +109,14 @@ Please review and confirm this appointment in your admin panel."""
 def extract_appointment_info(message):
     """Extract appointment information from user message using AI"""
     try:
+        if client is None:
+            print("OpenAI client not available, using fallback appointment detection")
+            # Simple fallback appointment detection
+            if any(word in message.lower() for word in ['appointment', 'book', 'schedule']):
+                return {"appointment": True, "name": "Not provided", "pet_name": "Not provided", 
+                       "date": "2025-07-27", "time": "10:00", "service": "general checkup", "notes": message}
+            return {"appointment": False}
+            
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -337,27 +354,43 @@ Example: "I want to book an appointment for my dog Max tomorrow at 2pm, my name 
         else:
             # Regular veterinary chat
             try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": """You are a helpful assistant for Dr. Venky Pet Clinic. 
-                        Answer questions about pet care, veterinary services, pet health, vaccinations, and general pet advice. 
-                        Be friendly and professional. If users ask about appointments, guide them to provide their details for booking.
-                        
-                        Services offered:
-                        - General health checkups
-                        - Vaccinations
-                        - Surgery
-                        - Emergency care
-                        - Dental care
-                        - Grooming
-                        - Pet boarding
-                        
-                        Clinic hours: Monday-Saturday, 9 AM - 6 PM"""},
-                        {"role": "user", "content": user_message}
-                    ]
-                )
-                reply = response.choices[0].message.content.strip()
+                if client is None:
+                    reply = """Hello! Welcome to Dr. Venky Pet Clinic. 
+                    
+I'm here to help with your pet care needs. Our services include:
+- General health checkups
+- Vaccinations  
+- Surgery
+- Emergency care
+- Dental care
+- Grooming
+- Pet boarding
+
+Clinic hours: Monday-Saturday, 9 AM - 6 PM
+
+For appointments, please provide your name, pet's name, and preferred date/time."""
+                else:
+                    response = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": """You are a helpful assistant for Dr. Venky Pet Clinic. 
+                            Answer questions about pet care, veterinary services, pet health, vaccinations, and general pet advice. 
+                            Be friendly and professional. If users ask about appointments, guide them to provide their details for booking.
+                            
+                            Services offered:
+                            - General health checkups
+                            - Vaccinations
+                            - Surgery
+                            - Emergency care
+                            - Dental care
+                            - Grooming
+                            - Pet boarding
+                            
+                            Clinic hours: Monday-Saturday, 9 AM - 6 PM"""},
+                            {"role": "user", "content": user_message}
+                        ]
+                    )
+                    reply = response.choices[0].message.content.strip()
             except Exception as e:
                 print("OpenAI API error:", str(e))
                 reply = "Sorry, I couldn't process your request right now."
