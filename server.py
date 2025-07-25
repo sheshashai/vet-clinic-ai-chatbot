@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, session, redirect, url_for, send_from_directory
+from flask import Flask, request, jsonify, session, redirect, url_for, send_from_directory, render_template
 from flask_cors import CORS
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -31,7 +31,7 @@ except ImportError:
     WHATSAPP_ENABLED = False
     print("Warning: Twilio not installed. WhatsApp notifications disabled.")
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app, supports_credentials=True)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
 
@@ -263,27 +263,23 @@ def get_user():
 def serve_admin():
     if not is_logged_in() or not is_admin():
         return redirect('/login.html')
-    return send_from_directory('.', 'admin.html')
+    return render_template('admin.html')
 
 @app.route('/login.html')
 def serve_login():
-    return send_from_directory('.', 'login.html')
+    return render_template('login.html')
 
 @app.route('/profile.html')
 def serve_profile():
-    return send_from_directory('.', 'profile.html')
+    return render_template('profile.html')
 
 @app.route('/')
 def serve_root():
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 @app.route('/index.html')
 def serve_index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/style.css')
-def serve_css():
-    return send_from_directory('.', 'style.css')
+    return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():

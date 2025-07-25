@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dr. Venky Pet Clinic Chatbot</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -973,11 +973,11 @@
     </button>
     <nav class="navbar-right" aria-label="Main navigation" id="navbar-auth">
       <!-- Auth buttons will be populated by JavaScript based on login status -->
-      <a href="login.html" class="nav-btn nav-login" tabindex="0" aria-label="Login">
+      <a href="{{ url_for('serve_login') }}" class="nav-btn nav-login" tabindex="0" aria-label="Login">
         <i class="fa fa-sign-in-alt"></i>
         <span>Login</span>
       </a>
-      <a href="login.html?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
+      <a href="{{ url_for('serve_login') }}?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
         <i class="fa fa-user-plus"></i>
         <span>Register</span>
       </a>
@@ -1334,7 +1334,7 @@
       
       if (isLoggedIn && currentUser) {
         navbarAuth.innerHTML = `
-          <a href="profile.html" class="nav-btn nav-profile" tabindex="0" aria-label="My Profile">
+          <a href="/profile.html" class="nav-btn nav-profile" tabindex="0" aria-label="My Profile">
             <i class="fa fa-user"></i>
             <span>My Profile</span>
           </a>
@@ -1345,11 +1345,11 @@
         `;
       } else {
         navbarAuth.innerHTML = `
-          <a href="login.html" class="nav-btn nav-login" tabindex="0" aria-label="Login">
+          <a href="/login.html" class="nav-btn nav-login" tabindex="0" aria-label="Login">
             <i class="fa fa-sign-in-alt"></i>
             <span>Login</span>
           </a>
-          <a href="login.html?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
+          <a href="/login.html?register=1" class="nav-btn nav-register" tabindex="0" aria-label="Register">
             <i class="fa fa-user-plus"></i>
             <span>Register</span>
           </a>

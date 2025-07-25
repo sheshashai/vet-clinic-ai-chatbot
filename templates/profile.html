@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Profile - Dr. Venky Pet Clinic</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -300,7 +300,7 @@
   <!-- Header/Navbar End -->
   
   <div class="profile-container">
-    <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+    <a href="{{ url_for('serve_index') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
     
     <div class="profile-header">
       <div class="profile-avatar">
@@ -334,7 +334,7 @@
     </div>
     
     <div class="profile-actions">
-      <a href="index.html" class="btn btn-secondary">
+      <a href="{{ url_for('serve_index') }}" class="btn btn-secondary">
         <i class="fas fa-home"></i> Back to Home
       </a>
       <button id="signout-btn" class="btn btn-primary">
@@ -398,7 +398,7 @@
     function updateNavbar(user) {
       const navbarAuth = document.getElementById('navbar-auth');
       navbarAuth.innerHTML = `
-        <a href="profile.html" class="nav-btn nav-profile" tabindex="0" aria-label="My Profile">
+        <a href="/profile.html" class="nav-btn nav-profile" tabindex="0" aria-label="My Profile">
           <i class="fa fa-user"></i>
           <span>My Profile</span>
         </a>
