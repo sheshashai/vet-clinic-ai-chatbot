@@ -49,6 +49,60 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def init_db():
+    with get_db_connection() as conn:
+        conn.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user'
+        );
+        CREATE TABLE IF NOT EXISTS appointments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          name TEXT,
+          pet_name TEXT NOT NULL,
+          phone TEXT,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          service TEXT DEFAULT 'General Consultation',
+          notes TEXT,
+          status TEXT DEFAULT 'scheduled',
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        ''')
+        # Insert initial test user if not exists
+        try:
+            user = conn.execute("SELECT * FROM users WHERE username = ?", ('testuser',)).fetchone()
+            if not user:
+                import bcrypt
+                hashed_pw = bcrypt.hashpw('testpass'.encode(), bcrypt.gensalt()).decode()
+                conn.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+                             ('testuser', 'test@example.com', hashed_pw, 'user'))
+            # Insert initial test appointment if not exists
+            appointment = conn.execute("SELECT * FROM appointments WHERE pet_name = ?", ('Buddy',)).fetchone()
+            if not appointment:
+                user_id = conn.execute("SELECT id FROM users WHERE username = ?", ('testuser',)).fetchone()
+                user_id = user_id['id'] if user_id else None
+                conn.execute("""
+                    INSERT INTO appointments (user_id, pet_name, phone, date, time, service, notes, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (user_id, 'Buddy', '1234567890', '2025-07-27', '10:00', 'General Consultation', 'First visit', 'scheduled'))
+            conn.commit()
+        except Exception as e:
+            print(f"Warning: Could not insert initial data: {e}")
+
+# Initialize database when the module is imported
+try:
+    init_db()
+    print("Database initialized successfully")
+except Exception as e:
+    print(f"Database initialization error: {e}")
+
 def send_whatsapp_notification(appointment_data):
     """Send WhatsApp notification to admin about new appointment"""
     if not WHATSAPP_ENABLED:
@@ -174,50 +228,6 @@ def is_admin():
 
 def is_logged_in():
     return 'user' in session
-
-def init_db():
-    with get_db_connection() as conn:
-        conn.executescript('''
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT UNIQUE NOT NULL,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'user'
-        );
-        CREATE TABLE IF NOT EXISTS appointments (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id INTEGER,
-          name TEXT,
-          pet_name TEXT NOT NULL,
-          phone TEXT,
-          date TEXT NOT NULL,
-          time TEXT NOT NULL,
-          service TEXT DEFAULT 'General Consultation',
-          notes TEXT,
-          status TEXT DEFAULT 'scheduled',
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-        );
-        ''')
-        # Insert initial test user if not exists
-        user = conn.execute("SELECT * FROM users WHERE username = ?", ('testuser',)).fetchone()
-        if not user:
-            import bcrypt
-            hashed_pw = bcrypt.hashpw('testpass'.encode(), bcrypt.gensalt()).decode()
-            conn.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                         ('testuser', 'test@example.com', hashed_pw, 'user'))
-        # Insert initial test appointment if not exists
-        appointment = conn.execute("SELECT * FROM appointments WHERE pet_name = ?", ('Buddy',)).fetchone()
-        if not appointment:
-            user_id = conn.execute("SELECT id FROM users WHERE username = ?", ('testuser',)).fetchone()
-            user_id = user_id['id'] if user_id else None
-            conn.execute("""
-                INSERT INTO appointments (user_id, pet_name, phone, date, time, service, notes, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (user_id, 'Buddy', '1234567890', '2025-07-25', '10:00', 'General Consultation', 'First visit', 'scheduled'))
-        conn.commit()
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -405,6 +415,30 @@ def get_appointments():
         appointments = conn.execute('SELECT * FROM appointments').fetchall()
         appointments_list = [dict(apt) for apt in appointments]
         return jsonify({'appointments': appointments_list, 'total': len(appointments_list)})
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint to verify database connectivity"""
+    try:
+        with get_db_connection() as conn:
+            # Test database connection
+            conn.execute('SELECT 1').fetchone()
+            # Check if tables exist
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            table_names = [table['name'] for table in tables]
+            
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected',
+                'tables': table_names,
+                'timestamp': datetime.now().isoformat()
+            })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/appointments/<int:apt_id>', methods=['PUT'])
 def update_appointment(apt_id):
