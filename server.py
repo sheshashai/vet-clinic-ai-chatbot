@@ -16,6 +16,7 @@ from psycopg2.extras import RealDictCursor
 import hashlib
 import time as time_module
 import decimal
+import urllib.parse
 
 # Simple in-memory cache for common responses
 response_cache = {}
@@ -136,9 +137,40 @@ def cache_response(message, response):
 def get_db_connection():
     """Get database connection using psycopg2 for raw SQL operations"""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        # Add connection timeout and retry logic for Render.com deployment
+        conn = psycopg2.connect(
+            DATABASE_URL,
+            connect_timeout=30,
+            application_name='vet-clinic-chatbot'
+        )
         conn.cursor_factory = RealDictCursor
         return conn
+    except psycopg2.OperationalError as e:
+        print(f"Database connection error: {e}")
+        # Try alternative connection method for IPv6 issues
+        if "Network is unreachable" in str(e):
+            print("Attempting connection with different parameters...")
+            try:
+                # Parse DATABASE_URL and reconstruct without IPv6
+                import urllib.parse as urlparse
+                parsed = urlparse.urlparse(DATABASE_URL)
+                
+                conn = psycopg2.connect(
+                    host=parsed.hostname,
+                    port=parsed.port or 5432,
+                    database=parsed.path[1:],  # Remove leading slash
+                    user=parsed.username,
+                    password=parsed.password,
+                    connect_timeout=30,
+                    application_name='vet-clinic-chatbot'
+                )
+                conn.cursor_factory = RealDictCursor
+                return conn
+            except Exception as retry_error:
+                print(f"Retry connection failed: {retry_error}")
+                raise e
+        else:
+            raise
     except Exception as e:
         print(f"Database connection error: {e}")
         raise
@@ -593,12 +625,30 @@ def health_check():
                     'status': 'healthy',
                     'database': 'connected',
                     'tables': table_names,
+                    'database_url_host': DATABASE_URL.split('@')[1].split(':')[0] if '@' in DATABASE_URL else 'unknown',
+                    'environment': os.getenv('RENDER') and 'render' or 'local',
                     'timestamp': datetime.now().isoformat()
                 })
+    except psycopg2.OperationalError as e:
+        error_msg = str(e)
+        return jsonify({
+            'status': 'unhealthy',
+            'error': 'Database connection failed',
+            'error_details': error_msg,
+            'database_url_host': DATABASE_URL.split('@')[1].split(':')[0] if '@' in DATABASE_URL else 'unknown',
+            'environment': os.getenv('RENDER') and 'render' or 'local',
+            'suggestions': [
+                'Check if Supabase project is active (not paused)',
+                'Verify DATABASE_URL environment variable',
+                'Check Supabase project settings for allowed connections'
+            ],
+            'timestamp': datetime.now().isoformat()
+        }), 500
     except Exception as e:
         return jsonify({
             'status': 'unhealthy',
             'error': str(e),
+            'environment': os.getenv('RENDER') and 'render' or 'local',
             'timestamp': datetime.now().isoformat()
         }), 500
 
