@@ -149,6 +149,55 @@ def get_db_connection():
             print(f"SQLite connection error: {e}")
             raise
 
+def get_cursor(conn):
+    """Get a cursor that works for both SQLite and PostgreSQL"""
+    cursor = conn.cursor()
+    # Check if it's SQLite by checking for row_factory attribute
+    if hasattr(conn, 'row_factory'):
+        # SQLite - cursor doesn't support context manager
+        return cursor
+    else:
+        # PostgreSQL - cursor supports context manager
+        return cursor
+
+def execute_db_query(conn, query, params=None, fetch_one=False, fetch_all=False):
+    """Execute database query with proper cursor handling for both SQLite and PostgreSQL"""
+    is_sqlite = hasattr(conn, 'row_factory')
+    
+    if is_sqlite:
+        # SQLite - manual cursor management
+        cur = conn.cursor()
+        try:
+            if params:
+                # Convert %s to ? for SQLite
+                sqlite_query = query.replace('%s', '?')
+                cur.execute(sqlite_query, params)
+            else:
+                cur.execute(query)
+            
+            if fetch_one:
+                return cur.fetchone()
+            elif fetch_all:
+                return cur.fetchall()
+            else:
+                return cur.lastrowid if cur.lastrowid else True
+        finally:
+            cur.close()
+    else:
+        # PostgreSQL - context manager
+        with conn.cursor() as cur:
+            if params:
+                cur.execute(query, params)
+            else:
+                cur.execute(query)
+            
+            if fetch_one:
+                return cur.fetchone()
+            elif fetch_all:
+                return cur.fetchall()
+            else:
+                return cur.rowcount
+
 def init_db():
     """Initialize database - create tables if needed"""
     try:
@@ -160,50 +209,54 @@ def init_db():
                 print("Initializing SQLite database...")
                 cur = conn.cursor()
                 
-                # Create tables if they don't exist (SQLite)
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE NOT NULL,
-                        email TEXT UNIQUE NOT NULL,
-                        password TEXT NOT NULL,
-                        role TEXT DEFAULT 'user',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS appointments (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER,
-                        name TEXT NOT NULL,
-                        pet_name TEXT NOT NULL,
-                        phone TEXT NOT NULL,
-                        date TEXT NOT NULL,
-                        time TEXT NOT NULL,
-                        service TEXT NOT NULL,
-                        notes TEXT,
-                        status TEXT DEFAULT 'scheduled',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users (id)
-                    )
-                """)
-                
-                # Insert admin user if not exists
-                cur.execute("SELECT * FROM users WHERE username = ?", ('admin',))
-                admin = cur.fetchone()
-                if not admin:
-                    import bcrypt
-                    admin_pw = bcrypt.hashpw('admin123'.encode(), bcrypt.gensalt()).decode()
-                    cur.execute(
-                        "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                        ('admin', 'admin@drvenky.com', admin_pw, 'admin')
-                    )
-                    print("Admin user created (username: admin, password: admin123)")
-                
-                conn.commit()
-                print("SQLite database initialized successfully")
+                try:
+                    # Create tables if they don't exist (SQLite)
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            username TEXT UNIQUE NOT NULL,
+                            email TEXT UNIQUE NOT NULL,
+                            password TEXT NOT NULL,
+                            role TEXT DEFAULT 'user',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS appointments (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER,
+                            name TEXT NOT NULL,
+                            pet_name TEXT NOT NULL,
+                            phone TEXT NOT NULL,
+                            date TEXT NOT NULL,
+                            time TEXT NOT NULL,
+                            service TEXT NOT NULL,
+                            notes TEXT,
+                            status TEXT DEFAULT 'scheduled',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users (id)
+                        )
+                    """)
+                    
+                    # Insert admin user if not exists
+                    cur.execute("SELECT * FROM users WHERE username = ?", ('admin',))
+                    admin = cur.fetchone()
+                    if not admin:
+                        import bcrypt
+                        admin_pw = bcrypt.hashpw('admin123'.encode(), bcrypt.gensalt()).decode()
+                        cur.execute(
+                            "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+                            ('admin', 'admin@drvenky.com', admin_pw, 'admin')
+                        )
+                        print("Admin user created (username: admin, password: admin123)")
+                    
+                    conn.commit()
+                    print("SQLite database initialized successfully")
+                    
+                finally:
+                    cur.close()
                 
             else:
                 print("Initializing PostgreSQL database...")
