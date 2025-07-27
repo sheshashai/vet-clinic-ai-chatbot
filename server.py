@@ -137,42 +137,77 @@ def cache_response(message, response):
 def get_db_connection():
     """Get database connection using psycopg2 for raw SQL operations"""
     try:
-        # Add connection timeout and retry logic for Render.com deployment
-        conn = psycopg2.connect(
-            DATABASE_URL,
-            connect_timeout=30,
-            application_name='vet-clinic-chatbot'
-        )
+        # Enhanced connection for Render.com deployment
+        conn_params = {
+            'connect_timeout': 60,  # Increased timeout for Render.com
+            'application_name': 'vet-clinic-render',
+            'sslmode': 'require'  # Force SSL for Supabase
+        }
+        
+        # Try primary connection with SSL
+        conn = psycopg2.connect(DATABASE_URL, **conn_params)
         conn.cursor_factory = RealDictCursor
         return conn
+        
     except psycopg2.OperationalError as e:
+        error_str = str(e).lower()
         print(f"Database connection error: {e}")
-        # Try alternative connection method for IPv6 issues
-        if "Network is unreachable" in str(e):
-            print("Attempting connection with different parameters...")
+        
+        # Handle specific Render.com + Supabase issues
+        if any(phrase in error_str for phrase in ["network is unreachable", "connection refused", "timeout"]):
+            print("Attempting Render.com-specific connection methods...")
+            
             try:
-                # Parse DATABASE_URL and reconstruct without IPv6
+                # Method 1: Parse URL and add specific SSL parameters
                 import urllib.parse as urlparse
                 parsed = urlparse.urlparse(DATABASE_URL)
                 
+                # Reconstruct connection with Render.com optimizations
                 conn = psycopg2.connect(
                     host=parsed.hostname,
                     port=parsed.port or 5432,
                     database=parsed.path[1:],  # Remove leading slash
                     user=parsed.username,
                     password=parsed.password,
-                    connect_timeout=30,
-                    application_name='vet-clinic-chatbot'
+                    connect_timeout=60,
+                    application_name='vet-clinic-render',
+                    sslmode='require',
+                    sslcert=None,  # Don't use client cert
+                    sslkey=None,   # Don't use client key
+                    sslrootcert=None  # Use system CA bundle
                 )
                 conn.cursor_factory = RealDictCursor
+                print("✅ Alternative connection method successful")
                 return conn
+                
             except Exception as retry_error:
-                print(f"Retry connection failed: {retry_error}")
-                raise e
+                print(f"Alternative connection failed: {retry_error}")
+                
+                # Method 2: Try with modified URL
+                try:
+                    # Add SSL parameters directly to URL
+                    ssl_url = DATABASE_URL
+                    if '?' not in ssl_url:
+                        ssl_url += '?sslmode=require&connect_timeout=60'
+                    else:
+                        ssl_url += '&sslmode=require&connect_timeout=60'
+                    
+                    conn = psycopg2.connect(ssl_url)
+                    conn.cursor_factory = RealDictCursor
+                    print("✅ SSL URL connection successful")
+                    return conn
+                    
+                except Exception as final_error:
+                    print(f"All connection methods failed: {final_error}")
+                    raise e
         else:
             raise
+            
     except Exception as e:
         print(f"Database connection error: {e}")
+        # Check if this might be a Supabase project pause issue
+        if "authentication failed" in str(e).lower():
+            print("💡 This might be a Supabase project pause issue. Check your Supabase dashboard.")
         raise
 
 def init_db():
