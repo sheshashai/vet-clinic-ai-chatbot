@@ -1,0 +1,25 @@
+{
+  "deployment_date": "2025-07-27T16:02:31.940244",
+  "repository": "sheshashai/vet-clinic-ai-chatbot",
+  "runtime": "Python 3",
+  "build_command": "pip install -r requirements.txt",
+  "start_command": "python -m gunicorn server:app -c gunicorn.conf.py",
+  "environment_variables": {
+    "DATABASE_URL": "SET",
+    "SUPABASE_URL": "SET",
+    "SUPABASE_ANON_KEY": "SET",
+    "SUPABASE_SERVICE_ROLE_KEY": "SET",
+    "OPENAI_API_KEY": "SET",
+    "TWILIO_ACCOUNT_SID": "SET",
+    "TWILIO_AUTH_TOKEN": "SET",
+    "TWILIO_WHATSAPP_NUMBER": "SET",
+    "ADMIN_WHATSAPP_NUMBER": "SET",
+    "SECRET_KEY": "SET"
+  },
+  "missing_variables": [],
+  "test_endpoints": [
+    "https://your-app.onrender.com/health",
+    "https://your-app.onrender.com/debug",
+    "https://your-app.onrender.com"
+  ]
+}
