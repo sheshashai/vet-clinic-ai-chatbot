@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-import socket
 import os
 import time as time_module
 import hashlib
@@ -136,70 +134,39 @@ def cache_response(message, response):
     }
 
 def get_db_connection():
-    """Get database connection using psycopg2 with IPv4 forcing for Render.com"""
+    """Get a database connection using the Supabase connection pooler."""
     try:
-        parsed = urlparse(DATABASE_URL)
-        hostname = parsed.hostname
-        ipv4_address = None
-
-        try:
-            # Force IPv4 resolution.
-            addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET)
-            ipv4_address = addr_info[0][4][0]
-            print(f"Successfully resolved hostname '{hostname}' to IPv4 address: {ipv4_address}")
-        except socket.gaierror as e:
-            print(f"FATAL: DNS resolution to IPv4 failed for hostname '{hostname}'. Error: {e}")
-            print("This is a critical network configuration issue. The application cannot connect to the database.")
-            print("This can happen on some platforms like Render. Please ensure their DNS can resolve A records (IPv4).")
-            raise
-
-        conn_params = {
-            'host': ipv4_address,
-            'port': parsed.port or 5432,
-            'database': parsed.path[1:],
-            'user': parsed.username,
-            'password': parsed.password,
-            'connect_timeout': 15,
-            'application_name': 'vet-clinic-render-ipv4',
-            'sslmode': 'require',
-        }
-        
-        print(f"Attempting to connect to database at {ipv4_address}:{conn_params['port']}...")
-        conn = psycopg2.connect(**conn_params)
+        # The DATABASE_URL should now be the connection pooler URL from Supabase
+        conn = psycopg2.connect(DATABASE_URL)
         conn.cursor_factory = RealDictCursor
-        print("✅ Database connection via IPv4 successful.")
         return conn
-
     except psycopg2.OperationalError as e:
-        print(f"FATAL: Could not connect to the database using IPv4. Error: {e}")
-        if "timeout" in str(e).lower():
-            print("💡 Suggestion: The connection timed out. This often means a firewall is blocking the connection. Have you added ALL of Render's outbound IPs to the Supabase Network Restrictions list?")
+        print(f"FATAL: Could not connect to the database. Error: {e}")
+        print("💡 Suggestion: Check your DATABASE_URL environment variable. Ensure it is the Supabase Connection Pooler URL (port 6543).")
         raise
-    
     except Exception as e:
         print(f"FATAL: An unexpected error occurred during database connection. Error: {e}")
         raise
 
 def init_db():
     """Initialize and test the database connection. The application will not start if this fails."""
-    print("Attempting to initialize database connection...")
+    print("Attempting to initialize database connection using the connection pooler...")
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 print("✅ Database connection test successful.")
     except Exception as e:
-        print("❌ Database initialization FAILED. The application cannot start.")
+        print(f"❌ Database initialization FAILED. The application cannot start. Error: {e}")
         # Re-raise the exception to halt the application startup process.
-        raise e
+        raise
 
 # Initialize database when the module is imported
 try:
     init_db()
     print("✅ Database is ready.")
-except Exception as e:
-    print(f"A critical error occurred during startup, so the application will not start: {e}")
-    # Re-raise to ensure the gunicorn worker fails to boot
+except Exception:
+    # The error is already printed in init_db, just re-raise to stop the app
     raise
 
 def send_whatsapp_notification(appointment_data):
