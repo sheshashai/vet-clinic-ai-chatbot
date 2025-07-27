@@ -137,166 +137,70 @@ def cache_response(message, response):
 
 def get_db_connection():
     """Get database connection using psycopg2 with IPv4 forcing for Render.com"""
-    
     try:
-        # Parse the DATABASE_URL to get components
         parsed = urlparse(DATABASE_URL)
         hostname = parsed.hostname
-        
-        # Force IPv4 resolution
+        ipv4_address = None
+
         try:
-            # Get IPv4 address for the hostname
-            ipv4_address = socket.getaddrinfo(hostname, None, socket.AF_INET)[0][4][0]
-            print(f"Resolved {hostname} to IPv4: {ipv4_address}")
-            
-            # Connection parameters optimized for Render.com + Supabase
-            conn_params = {
-                'host': ipv4_address,  # Use IPv4 address directly
-                'port': parsed.port or 5432,
-                'database': parsed.path[1:],  # Remove leading slash
-                'user': parsed.username,
-                'password': parsed.password,
-                'connect_timeout': 60,
-                'application_name': 'vet-clinic-render-ipv4',
-                'sslmode': 'require',
-            }
-            
-            # Create connection with IPv4 enforcement
-            conn = psycopg2.connect(**conn_params)
-            conn.cursor_factory = RealDictCursor
-            print("✅ IPv4 connection successful")
-            return conn
-            
-        except socket.gaierror as dns_error:
-            print(f"DNS resolution failed: {dns_error}")
-            # Fallback to original URL if DNS fails
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                connect_timeout=60,
-                application_name='vet-clinic-render-fallback'
-            )
-            conn.cursor_factory = RealDictCursor
-            print("✅ Fallback connection successful")
-            return conn
-        
-    except psycopg2.OperationalError as e:
-        error_str = str(e).lower()
-        print(f"Database connection error: {e}")
-        
-        # Handle specific connection issues
-        if any(phrase in error_str for phrase in ["network is unreachable", "connection refused", "timeout", "ipv6"]):
-            print("Attempting alternative IPv4 connection methods...")
-            
-            try:
-                # Method 1: Direct connection string with IPv4 parameters
-                ipv4_url = DATABASE_URL
-                if '?' not in ipv4_url:
-                    ipv4_url += '?sslmode=require&connect_timeout=60'
-                else:
-                    ipv4_url += '&sslmode=require&connect_timeout=60'
-                
-                conn = psycopg2.connect(ipv4_url)
-                conn.cursor_factory = RealDictCursor
-                print("✅ IPv4 URL connection successful")
-                return conn
-                
-            except Exception as retry_error:
-                print(f"IPv4 retry failed: {retry_error}")
-                
-                # Method 2: Manual parameter construction
-                try:
-                    parsed = urlparse(DATABASE_URL)
-                    conn = psycopg2.connect(
-                        host=parsed.hostname,
-                        port=parsed.port or 5432,
-                        database=parsed.path[1:],
-                        user=parsed.username,
-                        password=parsed.password,
-                        connect_timeout=60,
-                        application_name='vet-clinic-render-manual',
-                        sslmode='require'
-                    )
-                    conn.cursor_factory = RealDictCursor
-                    print("✅ Manual connection successful")
-                    return conn
-                    
-                except Exception as final_error:
-                    print(f"All IPv4 connection methods failed: {final_error}")
-                    raise e
-        else:
+            # Force IPv4 resolution.
+            addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET)
+            ipv4_address = addr_info[0][4][0]
+            print(f"Successfully resolved hostname '{hostname}' to IPv4 address: {ipv4_address}")
+        except socket.gaierror as e:
+            print(f"FATAL: DNS resolution to IPv4 failed for hostname '{hostname}'. Error: {e}")
+            print("This is a critical network configuration issue. The application cannot connect to the database.")
+            print("This can happen on some platforms like Render. Please ensure their DNS can resolve A records (IPv4).")
             raise
-            
+
+        conn_params = {
+            'host': ipv4_address,
+            'port': parsed.port or 5432,
+            'database': parsed.path[1:],
+            'user': parsed.username,
+            'password': parsed.password,
+            'connect_timeout': 15,
+            'application_name': 'vet-clinic-render-ipv4',
+            'sslmode': 'require',
+        }
+        
+        print(f"Attempting to connect to database at {ipv4_address}:{conn_params['port']}...")
+        conn = psycopg2.connect(**conn_params)
+        conn.cursor_factory = RealDictCursor
+        print("✅ Database connection via IPv4 successful.")
+        return conn
+
+    except psycopg2.OperationalError as e:
+        print(f"FATAL: Could not connect to the database using IPv4. Error: {e}")
+        if "timeout" in str(e).lower():
+            print("💡 Suggestion: The connection timed out. This often means a firewall is blocking the connection. Have you added ALL of Render's outbound IPs to the Supabase Network Restrictions list?")
+        raise
+    
     except Exception as e:
-        print(f"Database connection error: {e}")
-        # Check if this might be a Supabase project pause issue
-        if "authentication failed" in str(e).lower():
-            print("💡 This might be a Supabase project pause issue. Check your Supabase dashboard.")
+        print(f"FATAL: An unexpected error occurred during database connection. Error: {e}")
         raise
 
 def init_db():
-    """Initialize database - schema should already exist in Supabase"""
+    """Initialize and test the database connection. The application will not start if this fails."""
+    print("Attempting to initialize database connection...")
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Test connection
                 cur.execute("SELECT 1")
-                print("Database connection successful")
-                
-                # Check if tables exist
-                cur.execute("""
-                    SELECT table_name FROM information_schema.tables 
-                    WHERE table_schema = 'public' AND table_name IN ('users', 'appointments')
-                """)
-                tables = cur.fetchall()
-                table_names = [table['table_name'] for table in tables]
-                
-                if 'users' not in table_names or 'appointments' not in table_names:
-                    print("Warning: Required tables not found. Please run the SQL schema in Supabase.")
-                    print("Required tables: users, appointments")
-                    print("Found tables:", table_names)
-                else:
-                    print("All required tables found in database")
-                    
-                # Insert initial test data if not exists (optional for development)
-                try:
-                    cur.execute("SELECT * FROM users WHERE username = %s", ('testuser',))
-                    user = cur.fetchone()
-                    if not user:
-                        hashed_pw = bcrypt.hashpw('testpass'.encode(), bcrypt.gensalt()).decode()
-                        cur.execute(
-                            "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
-                            ('testuser', 'test@example.com', hashed_pw, 'user')
-                        )
-                        print("Test user created")
-                    
-                    # Insert initial test appointment if not exists
-                    cur.execute("SELECT * FROM appointments WHERE pet_name = %s", ('Buddy',))
-                    appointment = cur.fetchone()
-                    if not appointment:
-                        cur.execute("SELECT id FROM users WHERE username = %s", ('testuser',))
-                        user = cur.fetchone()
-                        user_id = user['id'] if user else None
-                        cur.execute("""
-                            INSERT INTO appointments (user_id, name, pet_name, phone, date, time, service, notes, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (user_id, 'Test User', 'Buddy', '1234567890', '2025-07-27', '10:00', 'General Consultation', 'First visit', 'scheduled'))
-                        print("Test appointment created")
-                    
-                    conn.commit()
-                except Exception as e:
-                    print(f"Warning: Could not insert initial data: {e}")
-                    conn.rollback()
-                    
+                print("✅ Database connection test successful.")
     except Exception as e:
-        print(f"Database initialization error: {e}")
-        print("Please ensure your DATABASE_URL is correct and Supabase tables are created")
+        print("❌ Database initialization FAILED. The application cannot start.")
+        # Re-raise the exception to halt the application startup process.
+        raise e
 
 # Initialize database when the module is imported
 try:
     init_db()
-    print("Database initialized successfully")
+    print("✅ Database is ready.")
 except Exception as e:
-    print(f"Database initialization error: {e}")
+    print(f"A critical error occurred during startup, so the application will not start: {e}")
+    # Re-raise to ensure the gunicorn worker fails to boot
+    raise
 
 def send_whatsapp_notification(appointment_data):
     """Send WhatsApp notification to admin about new appointment"""
