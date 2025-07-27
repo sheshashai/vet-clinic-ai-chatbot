@@ -1,5 +1,13 @@
+from urllib.parse import urlparse
+import socket
 import os
+import time as time_module
+import hashlib
 import json
+import decimal
+import traceback
+import bcrypt
+import psycopg2
 from datetime import datetime, timedelta, time, date
 from flask import Flask, request, jsonify, session, redirect, url_for, send_from_directory, render_template
 from flask_cors import CORS
@@ -8,15 +16,9 @@ from flask.json.provider import DefaultJSONProvider
 from sqlalchemy import text
 from openai import OpenAI
 from dotenv import load_dotenv
-import re
-import bcrypt
 from twilio.rest import Client
-import psycopg2
 from psycopg2.extras import RealDictCursor
-import hashlib
-import time as time_module
-import decimal
-import urllib.parse
+import re
 
 # Simple in-memory cache for common responses
 response_cache = {}
@@ -36,7 +38,6 @@ except Exception as e:
 
 # Twilio configuration for WhatsApp notifications
 try:
-    from twilio.rest import Client
     TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
     TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')  # Format: whatsapp:+14155238886
@@ -136,12 +137,10 @@ def cache_response(message, response):
 
 def get_db_connection():
     """Get database connection using psycopg2 with IPv4 forcing for Render.com"""
-    import socket
-    import urllib.parse as urlparse
     
     try:
         # Parse the DATABASE_URL to get components
-        parsed = urlparse.urlparse(DATABASE_URL)
+        parsed = urlparse(DATABASE_URL)
         hostname = parsed.hostname
         
         # Force IPv4 resolution
@@ -153,18 +152,13 @@ def get_db_connection():
             # Connection parameters optimized for Render.com + Supabase
             conn_params = {
                 'host': ipv4_address,  # Use IPv4 address directly
-                'port': parsed.port or 6543,  # Pooled connection port
+                'port': parsed.port or 5432,
                 'database': parsed.path[1:],  # Remove leading slash
                 'user': parsed.username,
                 'password': parsed.password,
                 'connect_timeout': 60,
                 'application_name': 'vet-clinic-render-ipv4',
                 'sslmode': 'require',
-                'sslcert': None,
-                'sslkey': None,
-                'sslrootcert': None,
-                # Force IPv4 socket family
-                'target_session_attrs': 'read-write'
             }
             
             # Create connection with IPv4 enforcement
@@ -197,9 +191,9 @@ def get_db_connection():
                 # Method 1: Direct connection string with IPv4 parameters
                 ipv4_url = DATABASE_URL
                 if '?' not in ipv4_url:
-                    ipv4_url += '?sslmode=require&connect_timeout=60&target_session_attrs=read-write'
+                    ipv4_url += '?sslmode=require&connect_timeout=60'
                 else:
-                    ipv4_url += '&sslmode=require&connect_timeout=60&target_session_attrs=read-write'
+                    ipv4_url += '&sslmode=require&connect_timeout=60'
                 
                 conn = psycopg2.connect(ipv4_url)
                 conn.cursor_factory = RealDictCursor
@@ -211,10 +205,10 @@ def get_db_connection():
                 
                 # Method 2: Manual parameter construction
                 try:
-                    parsed = urlparse.urlparse(DATABASE_URL)
+                    parsed = urlparse(DATABASE_URL)
                     conn = psycopg2.connect(
                         host=parsed.hostname,
-                        port=parsed.port or 6543,
+                        port=parsed.port or 5432,
                         database=parsed.path[1:],
                         user=parsed.username,
                         password=parsed.password,
