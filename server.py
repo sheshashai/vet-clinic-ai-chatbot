@@ -53,25 +53,18 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app, supports_credentials=True)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
 
-# Configure database - PostgreSQL with SQLite fallback
+# Configure PostgreSQL database
 DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL and DATABASE_URL.startswith('postgresql'):
-    # PostgreSQL configuration for production
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 10,
-        'pool_recycle': 120,
-        'pool_pre_ping': True
-    }
-    USE_SQLITE = False
-    print("Configured for PostgreSQL database")
-else:
-    # SQLite fallback
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-    USE_SQLITE = True
-    print("Configured for SQLite database (fallback)")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 120,
+    'pool_pre_ping': True
+}
 
 db = SQLAlchemy(app)
 
@@ -124,165 +117,72 @@ def cache_response(message, response):
     }
 
 def get_db_connection():
-    """Get database connection - PostgreSQL with SQLite fallback"""
-    if not USE_SQLITE and DATABASE_URL:
-        try:
-            conn = psycopg2.connect(DATABASE_URL)
-            conn.cursor_factory = RealDictCursor
-            return conn
-        except Exception as e:
-            print(f"PostgreSQL connection failed: {e}")
-            print("Falling back to SQLite...")
-            # Fall back to SQLite
-            import sqlite3
-            conn = sqlite3.connect('database.db')
-            conn.row_factory = sqlite3.Row
-            return conn
-    else:
-        # Use SQLite
-        import sqlite3
-        try:
-            conn = sqlite3.connect('database.db')
-            conn.row_factory = sqlite3.Row
-            return conn
-        except Exception as e:
-            print(f"SQLite connection error: {e}")
-            raise
-
-def get_cursor(conn):
-    """Get a cursor that works for both SQLite and PostgreSQL"""
-    cursor = conn.cursor()
-    # Check if it's SQLite by checking for row_factory attribute
-    if hasattr(conn, 'row_factory'):
-        # SQLite - cursor doesn't support context manager
-        return cursor
-    else:
-        # PostgreSQL - cursor supports context manager
-        return cursor
-
-def execute_db_query(conn, query, params=None, fetch_one=False, fetch_all=False):
-    """Execute database query with proper cursor handling for both SQLite and PostgreSQL"""
-    is_sqlite = hasattr(conn, 'row_factory')
-    
-    if is_sqlite:
-        # SQLite - manual cursor management
-        cur = conn.cursor()
-        try:
-            if params:
-                # Convert %s to ? for SQLite
-                sqlite_query = query.replace('%s', '?')
-                cur.execute(sqlite_query, params)
-            else:
-                cur.execute(query)
-            
-            if fetch_one:
-                return cur.fetchone()
-            elif fetch_all:
-                return cur.fetchall()
-            else:
-                return cur.lastrowid if cur.lastrowid else True
-        finally:
-            cur.close()
-    else:
-        # PostgreSQL - context manager
-        with conn.cursor() as cur:
-            if params:
-                cur.execute(query, params)
-            else:
-                cur.execute(query)
-            
-            if fetch_one:
-                return cur.fetchone()
-            elif fetch_all:
-                return cur.fetchall()
-            else:
-                return cur.rowcount
+    """Get database connection using psycopg2 for raw SQL operations"""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.cursor_factory = RealDictCursor
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        raise
 
 def init_db():
-    """Initialize database - create tables if needed"""
+    """Initialize database - schema should already exist in Supabase"""
     try:
         with get_db_connection() as conn:
-            # Detect if we're using SQLite (fallback) by checking connection type
-            is_sqlite = hasattr(conn, 'row_factory')
-            
-            if is_sqlite:
-                print("Initializing SQLite database...")
-                cur = conn.cursor()
+            with conn.cursor() as cur:
+                # Test connection
+                cur.execute("SELECT 1")
+                print("Database connection successful")
                 
+                # Check if tables exist
+                cur.execute("""
+                    SELECT table_name FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name IN ('users', 'appointments')
+                """)
+                tables = cur.fetchall()
+                table_names = [table['table_name'] for table in tables]
+                
+                if 'users' not in table_names or 'appointments' not in table_names:
+                    print("Warning: Required tables not found. Please run the SQL schema in Supabase.")
+                    print("Required tables: users, appointments")
+                    print("Found tables:", table_names)
+                else:
+                    print("All required tables found in database")
+                    
+                # Insert initial test data if not exists (optional for development)
                 try:
-                    # Create tables if they don't exist (SQLite)
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS users (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            username TEXT UNIQUE NOT NULL,
-                            email TEXT UNIQUE NOT NULL,
-                            password TEXT NOT NULL,
-                            role TEXT DEFAULT 'user',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS appointments (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            user_id INTEGER,
-                            name TEXT NOT NULL,
-                            pet_name TEXT NOT NULL,
-                            phone TEXT NOT NULL,
-                            date TEXT NOT NULL,
-                            time TEXT NOT NULL,
-                            service TEXT NOT NULL,
-                            notes TEXT,
-                            status TEXT DEFAULT 'scheduled',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (user_id) REFERENCES users (id)
-                        )
-                    """)
-                    
-                    # Insert admin user if not exists
-                    cur.execute("SELECT * FROM users WHERE username = ?", ('admin',))
-                    admin = cur.fetchone()
-                    if not admin:
-                        import bcrypt
-                        admin_pw = bcrypt.hashpw('admin123'.encode(), bcrypt.gensalt()).decode()
+                    cur.execute("SELECT * FROM users WHERE username = %s", ('testuser',))
+                    user = cur.fetchone()
+                    if not user:
+                        hashed_pw = bcrypt.hashpw('testpass'.encode(), bcrypt.gensalt()).decode()
                         cur.execute(
-                            "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                            ('admin', 'admin@drvenky.com', admin_pw, 'admin')
+                            "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
+                            ('testuser', 'test@example.com', hashed_pw, 'user')
                         )
-                        print("Admin user created (username: admin, password: admin123)")
+                        print("Test user created")
+                    
+                    # Insert initial test appointment if not exists
+                    cur.execute("SELECT * FROM appointments WHERE pet_name = %s", ('Buddy',))
+                    appointment = cur.fetchone()
+                    if not appointment:
+                        cur.execute("SELECT id FROM users WHERE username = %s", ('testuser',))
+                        user = cur.fetchone()
+                        user_id = user['id'] if user else None
+                        cur.execute("""
+                            INSERT INTO appointments (user_id, name, pet_name, phone, date, time, service, notes, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (user_id, 'Test User', 'Buddy', '1234567890', '2025-07-27', '10:00', 'General Consultation', 'First visit', 'scheduled'))
+                        print("Test appointment created")
                     
                     conn.commit()
-                    print("SQLite database initialized successfully")
+                except Exception as e:
+                    print(f"Warning: Could not insert initial data: {e}")
+                    conn.rollback()
                     
-                finally:
-                    cur.close()
-                
-            else:
-                print("Initializing PostgreSQL database...")
-                with conn.cursor() as cur:
-                    # Test connection
-                    cur.execute("SELECT 1")
-                    print("PostgreSQL connection successful")
-                    
-                    # Check if tables exist
-                    cur.execute("""
-                        SELECT table_name FROM information_schema.tables 
-                        WHERE table_schema = 'public' AND table_name IN ('users', 'appointments')
-                    """)
-                    tables = cur.fetchall()
-                    table_names = [table['table_name'] for table in tables]
-                    
-                    if 'users' not in table_names or 'appointments' not in table_names:
-                        print("Warning: Required tables not found. Please run the SQL schema.")
-                        print("Required tables: users, appointments")
-                        print("Found tables:", table_names)
-                    else:
-                        print("All required PostgreSQL tables found")
-                        
     except Exception as e:
         print(f"Database initialization error: {e}")
-        print("Application will continue with limited functionality")
+        print("Please ensure your DATABASE_URL is correct and Supabase tables are created")
 
 # Initialize database when the module is imported
 try:
