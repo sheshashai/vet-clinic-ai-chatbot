@@ -604,6 +604,56 @@ def performance_stats():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/debug', methods=['GET'])
+def debug_environment():
+    """Debug endpoint to check environment variables and configuration"""
+    try:
+        # Check critical environment variables (safely)
+        env_status = {}
+        required_vars = [
+            'DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 
+            'SUPABASE_SERVICE_ROLE_KEY', 'OPENAI_API_KEY', 
+            'TWILIO_ACCOUNT_SID', 'SECRET_KEY', 'FLASK_ENV'
+        ]
+        
+        for var in required_vars:
+            value = os.getenv(var)
+            if value:
+                # Show only first/last few characters for security
+                if len(value) > 10:
+                    display_value = value[:5] + "..." + value[-3:]
+                else:
+                    display_value = "***"
+                env_status[var] = f"SET ({display_value})"
+            else:
+                env_status[var] = "NOT SET"
+        
+        # Test database connection
+        db_status = "unknown"
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute('SELECT 1')
+                    cur.fetchone()
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"failed: {str(e)[:100]}"
+        
+        return jsonify({
+            'platform': 'render' if os.getenv('RENDER') else 'local',
+            'environment_variables': env_status,
+            'database_status': db_status,
+            'python_version': os.sys.version,
+            'working_directory': os.getcwd(),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 if __name__ == '__main__':
     init_db()
     port = int(os.getenv('PORT', 3001))
