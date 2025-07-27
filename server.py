@@ -1,9 +1,10 @@
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, date
 from flask import Flask, request, jsonify, session, redirect, url_for, send_from_directory, render_template
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask.json.provider import DefaultJSONProvider
 from sqlalchemy import text
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -13,7 +14,8 @@ from twilio.rest import Client
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import hashlib
-import time
+import time as time_module
+import decimal
 
 # Simple in-memory cache for common responses
 response_cache = {}
@@ -52,6 +54,21 @@ except ImportError:
 app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app, supports_credentials=True)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
+
+# Custom JSON provider to handle datetime and time objects
+class CustomJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, time):
+            return obj.strftime('%H:%M:%S')
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, date):
+            return obj.isoformat()
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return super().default(obj)
+
+app.json = CustomJSONProvider(app)
 
 # Configure PostgreSQL database
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -97,7 +114,7 @@ def get_quick_response(message):
 def get_cached_response(message):
     """Check if we have a cached response for similar messages"""
     message_hash = hashlib.md5(message.lower().strip().encode()).hexdigest()
-    current_time = time.time()
+    current_time = time_module.time()
     
     if message_hash in response_cache:
         cached_data = response_cache[message_hash]
@@ -113,7 +130,7 @@ def cache_response(message, response):
     message_hash = hashlib.md5(message.lower().strip().encode()).hexdigest()
     response_cache[message_hash] = {
         'response': response,
-        'timestamp': time.time()
+        'timestamp': time_module.time()
     }
 
 def get_db_connection():
@@ -240,6 +257,9 @@ Please review and confirm this appointment in your admin panel."""
         )
         
         print(f"WhatsApp notification sent successfully. Message SID: {message_instance.sid}")
+        print(f"Message status: {message_instance.status}")
+        print(f"To: {ADMIN_WHATSAPP_NUMBER}")
+        print(f"From: {TWILIO_WHATSAPP_NUMBER}")
         return True
         
     except Exception as e:
@@ -529,12 +549,27 @@ For appointments: Ask for name, pet name, preferred date/time."""},
 @app.route('/appointments', methods=['GET'])
 def get_appointments():
     """Get all appointments - for clinic admin"""
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('SELECT * FROM appointments ORDER BY created_at DESC')
-            appointments = cur.fetchall()
-            appointments_list = [dict(apt) for apt in appointments]
-            return jsonify({'appointments': appointments_list, 'total': len(appointments_list)})
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT * FROM appointments ORDER BY created_at DESC')
+                appointments = cur.fetchall()
+                appointments_list = []
+                for apt in appointments:
+                    apt_dict = dict(apt)
+                    # Convert problematic types to strings
+                    for key, value in apt_dict.items():
+                        if isinstance(value, time):
+                            apt_dict[key] = value.strftime('%H:%M:%S')
+                        elif isinstance(value, datetime):
+                            apt_dict[key] = value.isoformat()
+                        elif isinstance(value, date):
+                            apt_dict[key] = value.isoformat()
+                    appointments_list.append(apt_dict)
+                return jsonify({'appointments': appointments_list, 'total': len(appointments_list)})
+    except Exception as e:
+        print(f"Error in get_appointments: {e}")
+        return jsonify({'error': str(e), 'appointments': [], 'total': 0}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -603,6 +638,57 @@ def performance_stats():
         ],
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/test-whatsapp', methods=['POST'])
+def test_whatsapp():
+    """Test WhatsApp notification functionality"""
+    try:
+        # Test data
+        test_appointment = {
+            'id': 999,
+            'name': 'Test User',
+            'pet_name': 'Test Pet',
+            'phone': '555-TEST',
+            'date': '2025-07-28',
+            'time': '15:00',
+            'service': 'Test Service',
+            'notes': 'This is a test message',
+            'status': 'test',
+            'created_at': datetime.now().isoformat()
+        }
+        
+        # Check configuration
+        config_status = {
+            'whatsapp_enabled': WHATSAPP_ENABLED,
+            'twilio_account_sid': 'SET' if TWILIO_ACCOUNT_SID else 'NOT SET',
+            'twilio_auth_token': 'SET' if TWILIO_AUTH_TOKEN else 'NOT SET',
+            'twilio_whatsapp_number': TWILIO_WHATSAPP_NUMBER if TWILIO_WHATSAPP_NUMBER else 'NOT SET',
+            'admin_whatsapp_number': ADMIN_WHATSAPP_NUMBER if ADMIN_WHATSAPP_NUMBER else 'NOT SET'
+        }
+        
+        # Try to send test message
+        if WHATSAPP_ENABLED:
+            result = send_whatsapp_notification(test_appointment)
+            return jsonify({
+                'success': result,
+                'config': config_status,
+                'message': 'Test WhatsApp notification attempted',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'config': config_status,
+                'message': 'WhatsApp is disabled',
+                'timestamp': datetime.now().isoformat()
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/debug', methods=['GET'])
 def debug_environment():
