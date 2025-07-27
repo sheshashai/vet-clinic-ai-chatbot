@@ -135,70 +135,99 @@ def cache_response(message, response):
     }
 
 def get_db_connection():
-    """Get database connection using psycopg2 for raw SQL operations"""
+    """Get database connection using psycopg2 with IPv4 forcing for Render.com"""
+    import socket
+    import urllib.parse as urlparse
+    
     try:
-        # Enhanced connection for Render.com deployment
-        conn_params = {
-            'connect_timeout': 60,  # Increased timeout for Render.com
-            'application_name': 'vet-clinic-render',
-            'sslmode': 'require'  # Force SSL for Supabase
-        }
+        # Parse the DATABASE_URL to get components
+        parsed = urlparse.urlparse(DATABASE_URL)
+        hostname = parsed.hostname
         
-        # Try primary connection with SSL
-        conn = psycopg2.connect(DATABASE_URL, **conn_params)
-        conn.cursor_factory = RealDictCursor
-        return conn
+        # Force IPv4 resolution
+        try:
+            # Get IPv4 address for the hostname
+            ipv4_address = socket.getaddrinfo(hostname, None, socket.AF_INET)[0][4][0]
+            print(f"Resolved {hostname} to IPv4: {ipv4_address}")
+            
+            # Connection parameters optimized for Render.com + Supabase
+            conn_params = {
+                'host': ipv4_address,  # Use IPv4 address directly
+                'port': parsed.port or 6543,  # Pooled connection port
+                'database': parsed.path[1:],  # Remove leading slash
+                'user': parsed.username,
+                'password': parsed.password,
+                'connect_timeout': 60,
+                'application_name': 'vet-clinic-render-ipv4',
+                'sslmode': 'require',
+                'sslcert': None,
+                'sslkey': None,
+                'sslrootcert': None,
+                # Force IPv4 socket family
+                'target_session_attrs': 'read-write'
+            }
+            
+            # Create connection with IPv4 enforcement
+            conn = psycopg2.connect(**conn_params)
+            conn.cursor_factory = RealDictCursor
+            print("✅ IPv4 connection successful")
+            return conn
+            
+        except socket.gaierror as dns_error:
+            print(f"DNS resolution failed: {dns_error}")
+            # Fallback to original URL if DNS fails
+            conn = psycopg2.connect(
+                DATABASE_URL,
+                connect_timeout=60,
+                application_name='vet-clinic-render-fallback'
+            )
+            conn.cursor_factory = RealDictCursor
+            print("✅ Fallback connection successful")
+            return conn
         
     except psycopg2.OperationalError as e:
         error_str = str(e).lower()
         print(f"Database connection error: {e}")
         
-        # Handle specific Render.com + Supabase issues
-        if any(phrase in error_str for phrase in ["network is unreachable", "connection refused", "timeout"]):
-            print("Attempting Render.com-specific connection methods...")
+        # Handle specific connection issues
+        if any(phrase in error_str for phrase in ["network is unreachable", "connection refused", "timeout", "ipv6"]):
+            print("Attempting alternative IPv4 connection methods...")
             
             try:
-                # Method 1: Parse URL and add specific SSL parameters
-                import urllib.parse as urlparse
-                parsed = urlparse.urlparse(DATABASE_URL)
+                # Method 1: Direct connection string with IPv4 parameters
+                ipv4_url = DATABASE_URL
+                if '?' not in ipv4_url:
+                    ipv4_url += '?sslmode=require&connect_timeout=60&target_session_attrs=read-write'
+                else:
+                    ipv4_url += '&sslmode=require&connect_timeout=60&target_session_attrs=read-write'
                 
-                # Reconstruct connection with Render.com optimizations
-                conn = psycopg2.connect(
-                    host=parsed.hostname,
-                    port=parsed.port or 5432,
-                    database=parsed.path[1:],  # Remove leading slash
-                    user=parsed.username,
-                    password=parsed.password,
-                    connect_timeout=60,
-                    application_name='vet-clinic-render',
-                    sslmode='require',
-                    sslcert=None,  # Don't use client cert
-                    sslkey=None,   # Don't use client key
-                    sslrootcert=None  # Use system CA bundle
-                )
+                conn = psycopg2.connect(ipv4_url)
                 conn.cursor_factory = RealDictCursor
-                print("✅ Alternative connection method successful")
+                print("✅ IPv4 URL connection successful")
                 return conn
                 
             except Exception as retry_error:
-                print(f"Alternative connection failed: {retry_error}")
+                print(f"IPv4 retry failed: {retry_error}")
                 
-                # Method 2: Try with modified URL
+                # Method 2: Manual parameter construction
                 try:
-                    # Add SSL parameters directly to URL
-                    ssl_url = DATABASE_URL
-                    if '?' not in ssl_url:
-                        ssl_url += '?sslmode=require&connect_timeout=60'
-                    else:
-                        ssl_url += '&sslmode=require&connect_timeout=60'
-                    
-                    conn = psycopg2.connect(ssl_url)
+                    parsed = urlparse.urlparse(DATABASE_URL)
+                    conn = psycopg2.connect(
+                        host=parsed.hostname,
+                        port=parsed.port or 6543,
+                        database=parsed.path[1:],
+                        user=parsed.username,
+                        password=parsed.password,
+                        connect_timeout=60,
+                        application_name='vet-clinic-render-manual',
+                        sslmode='require'
+                    )
                     conn.cursor_factory = RealDictCursor
-                    print("✅ SSL URL connection successful")
+                    print("✅ Manual connection successful")
                     return conn
                     
                 except Exception as final_error:
-                    print(f"All connection methods failed: {final_error}")
+                    print(f"All IPv4 connection methods failed: {final_error}")
                     raise e
         else:
             raise

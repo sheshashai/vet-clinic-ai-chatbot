@@ -1,0 +1,17 @@
+# Alternative connection strings for Render.com deployment
+# Try these if the main DATABASE_URL fails on Render.com
+
+# Original (what you're using now)
+DATABASE_URL=postgresql://postgres:HhZtv2sAYqhgfJ2w@db.sxcmdhfhpoedloqwmgnb.supabase.co:5432/postgres
+
+# Alternative 1: Add SSL parameters (recommended for Render.com)
+DATABASE_URL_SSL=postgresql://postgres:HhZtv2sAYqhgfJ2w@db.sxcmdhfhpoedloqwmgnb.supabase.co:5432/postgres?sslmode=require
+
+# Alternative 2: Using IP instead of hostname (if DNS issues)
+# You would need to get the IP of db.sxcmdhfhpoedloqwmgnb.supabase.co
+# DATABASE_URL_IP=postgresql://postgres:HhZtv2sAYqhgfJ2w@[IP_ADDRESS]:5432/postgres?sslmode=require
+
+# Alternative 3: Connection pooling parameters
+DATABASE_URL_POOLED=postgresql://postgres:HhZtv2sAYqhgfJ2w@db.sxcmdhfhpoedloqwmgnb.supabase.co:5432/postgres?sslmode=require&connect_timeout=60&application_name=vet-clinic-render
+
+# For testing on Render.com, try updating your environment variable to use DATABASE_URL_SSL
